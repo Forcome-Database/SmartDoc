@@ -15,7 +15,7 @@ from app.core.middleware import (
 # Application metadata
 APP_TITLE = "Enterprise IDP Platform"
 APP_DESCRIPTION = """
-企业级智能文档处理中台 (Enterprise IDP Platform)
+智能文档处理中台 (IDP Platform)
 
 ## 核心功能
 

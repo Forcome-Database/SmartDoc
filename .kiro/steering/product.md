@@ -1,31 +1,42 @@
-# Product Overview
+# 产品概述
 
-## Enterprise IDP Platform (企业级智能文档处理中台)
+## 智能文档处理中台
 
-A high-availability, traceable, intelligent document processing platform that supports automated parsing of single-page and multi-page documents with end-to-end workflow from rule definition, data extraction, human-in-the-loop review, to secure downstream delivery.
+高可用、可溯源的文档处理平台，支持单页及多页文档自动化解析，实现规则定义→数据提取→人工审核→安全推送的全链路闭环。
 
-## Core Capabilities
+## 核心能力
 
-- **Document Processing**: Automated OCR and data extraction from PDF and image files (max 20MB, 50 pages)
-- **Multi-Engine OCR**: PaddleOCR (primary), Tesseract (fallback)
-- **Smart Deduplication**: SHA256-based instant file recognition to save compute resources
-- **Intelligent Extraction**: Regex, anchor-based, table extraction, and LLM-enhanced extraction strategies
-- **Human Review Workbench**: Visual audit interface with multi-page PDF preview, OCR highlighting, cross-page navigation
-- **Secure Webhooks**: HMAC-SHA256 signed push to downstream systems with retry mechanism
-- **Rule Engine**: Version control, sandbox testing, hot configuration updates
-- **Real-time Dashboard**: Task monitoring, performance analytics, anomaly tracking
+| 功能 | 说明 |
+|------|------|
+| 文档处理 | PDF/图片，最大20MB/50页 |
+| OCR引擎 | PaddleOCR(主) / Tesseract(备) / UmiOCR |
+| 智能去重 | SHA256哈希秒传 |
+| 数据提取 | 正则 / 锚点定位 / 表格 / LLM智能提取 |
+| 人工审核 | 多页PDF预览、OCR高亮、划词回填 |
+| 安全推送 | HMAC-SHA256签名、重试机制、死信队列 |
+| 规则引擎 | 版本控制、沙箱测试、热更新 |
 
-## Key Metrics & Goals
+## 性能指标
 
-- **API Response**: < 200ms (upload)
-- **OCR Processing**: < 3s per page
-- **Straight-Through Processing (STP)**: > 90% (no human intervention)
-- **Instant Recognition**: Cache hit for duplicate files
-- **Multi-page Support**: Up to 50 pages with merged text extraction
+- API响应: < 200ms
+- 单页OCR: < 3s
+- 直通率(STP): > 90%
 
-## User Roles
+## 用户角色
 
-- **Admin**: Full system configuration and user management
-- **Architect**: Rule creation, editing, publishing, sandbox testing
-- **Auditor**: Review pending tasks in workbench (no rule modification)
-- **Visitor**: API key generation and viewing only
+| 角色 | 权限 |
+|------|------|
+| Admin | 全部权限，用户管理 |
+| Architect | 规则创建/编辑/发布/沙箱测试 |
+| Auditor | 审核工作台，不可修改规则 |
+| Visitor | 仅API Key生成和查看 |
+
+## 任务状态流转
+
+```
+queued → processing → pending_audit → completed → pushing → push_success
+                   ↓                ↓
+                 failed          rejected
+                                    ↓
+                              push_failed
+```

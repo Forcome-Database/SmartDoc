@@ -1,6 +1,6 @@
 # Enterprise IDP Platform
 
-企业级智能文档处理中台 (Enterprise Intelligent Document Processing Platform)
+智能文档处理中台 (Intelligent Document Processing Platform)
 
 ## 项目简介
 

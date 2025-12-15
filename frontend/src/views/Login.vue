@@ -3,7 +3,7 @@
     <div class="login-box">
       <div class="login-header">
         <h1>{{ appTitle }}</h1>
-        <p>企业级智能文档处理中台</p>
+        <p>智能文档处理中台</p>
       </div>
       
       <a-form

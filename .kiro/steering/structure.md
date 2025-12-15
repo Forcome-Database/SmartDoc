@@ -1,96 +1,57 @@
-# Project Structure
+# 项目结构
 
-## Architecture
+## 架构
+前后端分离，Docker Compose 编排微服务。
 
-Frontend-backend separation with microservices architecture using Docker Compose orchestration.
-
-## Directory Layout
+## 目录结构
 
 ```
-enterprise-idp-platform/
-├── backend/                    # Python/FastAPI backend
+├── backend/                    # FastAPI 后端
 │   ├── app/
-│   │   ├── api/               # API routes
-│   │   │   └── v1/
-│   │   │       └── endpoints/ # Feature endpoints (auth, upload, tasks, rules, audit, webhook, dashboard, users, system)
-│   │   ├── core/              # Core configuration (config, security, dependencies)
-│   │   ├── models/            # SQLAlchemy database models
-│   │   ├── schemas/           # Pydantic validation schemas
-│   │   ├── services/          # Business logic (OCR, file processing, extraction, validation)
-│   │   └── tasks/             # Async task workers (OCR worker, push worker)
-│   ├── alembic/               # Database migration scripts
-│   ├── scripts/               # Utility scripts (init.sql)
-│   ├── main.py                # Application entry point
-│   ├── requirements.txt       # Python dependencies
-│   └── Dockerfile             # Backend container image
+│   │   ├── api/v1/endpoints/  # API端点 (auth, tasks, rules, audit, webhook, dashboard, users, system)
+│   │   ├── core/              # 核心配置 (config, security, dependencies)
+│   │   ├── models/            # SQLAlchemy 模型
+│   │   ├── schemas/           # Pydantic 验证
+│   │   ├── services/          # 业务逻辑 (OCR, extraction, validation)
+│   │   └── tasks/             # 异步Worker (ocr_worker, push_worker)
+│   ├── alembic/               # 数据库迁移
+│   └── scripts/               # 工具脚本
 │
-├── frontend/                   # Vue 3 frontend
+├── frontend/                   # Vue 3 前端
 │   ├── src/
-│   │   ├── api/               # Backend API wrappers
-│   │   ├── components/        # Reusable UI components
-│   │   ├── views/             # Page components (Dashboard, Rules, Tasks, Audit, Webhooks, System)
-│   │   ├── router/            # Vue Router configuration
-│   │   ├── stores/            # Pinia state management
-│   │   └── utils/             # Utility functions
-│   ├── package.json           # Node.js dependencies
-│   ├── vite.config.js         # Vite build configuration
-│   ├── tailwind.config.js     # Tailwind CSS configuration
-│   ├── postcss.config.js      # PostCSS configuration
-│   ├── nginx.conf             # Nginx web server configuration
-│   └── Dockerfile             # Frontend container image
+│   │   ├── api/               # API封装
+│   │   ├── components/        # 公共组件
+│   │   ├── views/             # 页面视图
+│   │   ├── router/            # 路由配置
+│   │   ├── stores/            # Pinia状态管理
+│   │   └── utils/             # 工具函数
+│   └── nginx.conf             # Nginx配置
 │
-├── .kiro/                      # Kiro IDE configuration
-│   ├── specs/                 # Feature specifications
-│   └── steering/              # AI assistant guidance (this directory)
-│
-├── docker-compose.yml          # Production service orchestration
-├── docker-compose.dev.yml      # Development overrides (hot reload)
-├── .env.example               # Environment variables template
-├── .gitignore
-├── README.md                  # Main documentation
-├── Prd.md                     # Product requirements (Chinese)
-├── TechnologyStack.md         # Tech stack details
-└── DirectoryStructure.md      # Structure documentation
+├── docs/                       # 技术文档
+├── .kiro/                      # Kiro配置
+│   ├── specs/                 # 功能规格
+│   └── steering/              # AI指导规则
+└── docker-compose.yml          # 服务编排
 ```
 
-## Key Conventions
+## 代码规范
 
-### Backend Structure
+### 后端
+- API版本: `/api/v1/`
+- 模型: `app/models/` 一个文件一个实体
+- 服务: `app/services/` 无状态服务类
+- 命名: snake_case (函数/变量), PascalCase (类)
+- 类型提示: 必须使用
+- 异步: I/O操作使用 async/await
 
-- **API Versioning**: All endpoints under `/api/v1/`
-- **Module Organization**: Feature-based modules in `app/api/v1/endpoints/`
-- **Models**: SQLAlchemy models in `app/models/`, one file per entity
-- **Schemas**: Pydantic schemas in `app/schemas/`, separate request/response models
-- **Services**: Business logic in `app/services/`, stateless service classes
-- **Tasks**: Async workers in `app/tasks/` for OCR processing and webhook delivery
+### 前端
+- 组件: PascalCase (`TaskList.vue`)
+- API: `src/api/` 按功能模块组织
+- 状态: `src/stores/` 一个store一个领域
+- 路由: 懒加载
+- 命名: camelCase (函数/变量), PascalCase (组件)
 
-### Frontend Structure
-
-- **Component Naming**: PascalCase for components (e.g., `TaskList.vue`)
-- **View Organization**: One view per route in `src/views/`
-- **API Layer**: Centralized API calls in `src/api/`, organized by feature
-- **State Management**: Pinia stores in `src/stores/`, one store per domain
-- **Routing**: Lazy-loaded routes in `src/router/index.js`
-
-### Code Style
-
-- **Backend**: Follow PEP 8, use type hints, async/await for I/O operations
-- **Frontend**: Vue 3 Composition API, `<script setup>` syntax preferred
-- **Naming**: 
-  - Python: snake_case for functions/variables, PascalCase for classes
-  - JavaScript: camelCase for functions/variables, PascalCase for components
-- **Documentation**: Docstrings for Python functions, JSDoc for complex JS functions
-
-### Configuration
-
-- **Environment Variables**: Use `.env` file, never commit secrets
-- **Database**: Connection pooling via SQLAlchemy, migrations via Alembic
-- **CORS**: Configured in `main.py` for development and production origins
-- **API Documentation**: Auto-generated via FastAPI at `/api/docs`
-
-### Docker
-
-- **Multi-stage Builds**: Optimize image size
-- **Health Checks**: All services have health check configurations
-- **Volume Mounts**: Development mode mounts source code for hot reload
-- **Service Dependencies**: Use `depends_on` with health conditions
+### 配置
+- 环境变量: `.env` 文件，不提交敏感信息
+- 数据库: SQLAlchemy连接池 + Alembic迁移
+- CORS: `main.py` 配置

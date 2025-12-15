@@ -6,7 +6,7 @@
         <FileTextOutlined class="logo-icon" />
         <span class="logo-text">Enterprise IDP Platform</span>
       </div>
-      <div class="logo-subtitle">企业级智能文档处理中台</div>
+      <div class="logo-subtitle">智能文档处理中台</div>
     </div>
 
     <!-- 右侧用户信息 -->
