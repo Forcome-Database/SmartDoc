@@ -478,7 +478,9 @@ async function handleExport() {
  * 判断是否可以重试
  */
 function canRetry(status) {
-  return status === TASK_STATUS.FAILED || status === TASK_STATUS.REJECTED
+  return status === TASK_STATUS.FAILED || 
+         status === TASK_STATUS.REJECTED ||
+         status === TASK_STATUS.PIPELINE_FAILED
 }
 
 /**

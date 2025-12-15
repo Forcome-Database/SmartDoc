@@ -310,9 +310,17 @@ class PipelineService:
     async def create_execution(
         self,
         pipeline: Pipeline,
-        task: Task
+        task: Task,
+        retry_count: int = 0
     ) -> PipelineExecution:
-        """创建执行记录"""
+        """
+        创建执行记录
+        
+        Args:
+            pipeline: 管道对象
+            task: 任务对象
+            retry_count: 当前重试次数
+        """
         # 准备输入数据
         input_data = {
             'task_id': task.id,
@@ -332,7 +340,8 @@ class PipelineService:
             pipeline_id=pipeline.id,
             task_id=task.id,
             status=ExecutionStatus.PENDING,
-            input_data=input_data
+            input_data=input_data,
+            retry_count=retry_count
         )
         
         self.db.add(execution)

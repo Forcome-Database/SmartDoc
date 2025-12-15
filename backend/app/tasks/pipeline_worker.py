@@ -63,14 +63,16 @@ class PipelineWorker:
         处理单个Pipeline任务
         
         Args:
-            task_data: 任务数据，包含task_id
+            task_data: 任务数据，包含task_id和retry_count
         """
         task_id = task_data.get('task_id')
+        retry_count = task_data.get('retry_count', 0)  # 从消息中获取重试次数
+        
         if not task_id:
             logger.error("任务数据缺少task_id")
             return
         
-        logger.info(f"开始处理Pipeline任务: {task_id}")
+        logger.info(f"开始处理Pipeline任务: {task_id}, 当前重试次数: {retry_count}")
         
         async with SessionLocal() as db:
             try:
@@ -99,9 +101,9 @@ class PipelineWorker:
                 # 3. 创建Pipeline服务并执行
                 pipeline_service = PipelineService(db)
                 
-                # 创建执行记录
-                execution = await pipeline_service.create_execution(pipeline, task)
-                logger.info(f"创建Pipeline执行记录: {execution.id}")
+                # 创建执行记录，传递当前重试次数
+                execution = await pipeline_service.create_execution(pipeline, task, retry_count)
+                logger.info(f"创建Pipeline执行记录: {execution.id}, 重试次数: {retry_count}")
                 
                 # 执行管道
                 execution = await pipeline_service.run_execution(execution, pipeline)
@@ -120,16 +122,21 @@ class PipelineWorker:
                     
                 else:
                     # 执行失败，根据重试配置决定是否重试
-                    if execution.retry_count < pipeline.max_retries:
+                    # 使用消息中的 retry_count 而不是 execution.retry_count
+                    if retry_count < pipeline.max_retries:
                         # 重新入队重试
-                        await self._retry_pipeline(task_id, execution.retry_count + 1)
-                        logger.warning(f"Pipeline执行失败，安排重试: {task_id}, 重试次数: {execution.retry_count + 1}")
+                        await self._retry_pipeline(task_id, retry_count + 1)
+                        logger.warning(f"Pipeline执行失败，安排重试: {task_id}, 重试次数: {retry_count + 1}/{pipeline.max_retries}")
                     else:
-                        # 达到最大重试次数，标记任务失败
+                        # 达到最大重试次数，标记任务失败并移入死信队列
                         task.status = TaskStatus.FAILED
-                        task.error_message = f"Pipeline执行失败: {execution.error_message}"
+                        total_attempts = retry_count + 1  # 总执行次数 = 重试次数 + 首次执行
+                        task.error_message = f"Pipeline执行失败（共执行{total_attempts}次）: {execution.error_message}"
                         await db.commit()
-                        logger.error(f"Pipeline执行失败，已达最大重试次数: {task_id}")
+                        logger.error(f"Pipeline执行失败，已达最大重试次数: {task_id}, 执行次数: {total_attempts}, 最大重试: {pipeline.max_retries}")
+                        
+                        # 移入死信队列，便于后续排查和手动重试
+                        await self._move_to_dlq(task_id, pipeline.id, execution.error_message, retry_count)
                 
             except Exception as e:
                 logger.error(f"Pipeline任务处理失败 [{task_id}]: {str(e)}", exc_info=True)
