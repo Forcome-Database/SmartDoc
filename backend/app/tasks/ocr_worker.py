@@ -7,7 +7,7 @@ import asyncio
 import json
 import os
 import tempfile
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -785,9 +785,20 @@ class OCRWorker:
             elif node_type in ('array', 'table'):
                 items = field_def.get('items', field_def.get('columns', {}))
                 if items:
-                    # 对于数组，子字段的必填校验需要特殊处理
-                    # 这里只生成数组本身的必填规则，子字段的必填在数组元素中校验
-                    pass
+                    # 收集数组子字段中标记为必填的字段
+                    required_child_fields = []
+                    for item_key, item_def in items.items():
+                        if item_def.get('required', False):
+                            required_child_fields.append(item_key)
+                    
+                    # 如果有必填子字段，生成数组元素校验规则
+                    if required_child_fields:
+                        rules.append({
+                            'field': field_path,
+                            'type': 'array_items_required',
+                            'required_fields': required_child_fields
+                        })
+                        logger.debug(f"自动生成数组子字段必填校验规则: {field_path}, 必填字段: {required_child_fields}")
         
         return rules
 

@@ -490,6 +490,14 @@ class ValidationService:
                     result.add_error(field, error, value)
                 continue
             
+            # 数组元素必填子字段校验
+            if rule_type == "array_items_required":
+                req_fields = rule.get("required_fields", [])
+                errors = self.validate_array_items_required(field, value, req_fields)
+                for error in errors:
+                    result.add_error(field, error, value)
+                continue
+            
             # 如果值为空且非必填，跳过其他校验
             if value is None or value == "":
                 continue
@@ -779,6 +787,53 @@ class ValidationService:
             return f"字段 {field} 存在重复元素: {', '.join(duplicates[:3])}{'...' if len(duplicates) > 3 else ''}"
         
         return None
+
+    def validate_array_items_required(
+        self,
+        field: str,
+        value: Any,
+        required_fields: List[str]
+    ) -> List[str]:
+        """
+        数组元素必填子字段校验
+        
+        检查数组是否存在且非空，以及每个元素是否包含必填子字段
+        
+        Args:
+            field: 字段名
+            value: 字段值（应为数组）
+            required_fields: 数组元素中必须包含的子字段列表
+            
+        Returns:
+            错误信息列表，校验通过返回空列表
+        """
+        errors = []
+        
+        # 检查数组是否存在
+        if value is None:
+            errors.append(f"必填字段为空: {field}")
+            return errors
+        
+        # 检查是否为数组类型
+        if not isinstance(value, list):
+            errors.append(f"字段 {field} 应为数组类型")
+            return errors
+        
+        # 检查数组是否为空
+        if len(value) == 0:
+            errors.append(f"必填数组为空: {field}")
+            return errors
+        
+        # 检查每个元素的必填子字段
+        for i, item in enumerate(value):
+            if not isinstance(item, dict):
+                continue
+            
+            for req_field in required_fields:
+                if req_field not in item or item[req_field] is None or item[req_field] == "":
+                    errors.append(f"数组 {field} 第{i+1}项缺少必填字段: {req_field}")
+        
+        return errors
     
     # ==================== 11.4 自定义脚本校验 ====================
     
