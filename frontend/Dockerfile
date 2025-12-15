@@ -6,6 +6,9 @@ FROM node:20-alpine as development
 
 WORKDIR /app
 
+# 配置 npm 国内镜像
+RUN npm config set registry https://registry.npmmirror.com
+
 # 复制 package 文件
 COPY package*.json ./
 
@@ -26,6 +29,9 @@ CMD ["npm", "run", "dev", "--", "--host"]
 FROM node:20-alpine as build
 
 WORKDIR /app
+
+# 配置 npm 国内镜像
+RUN npm config set registry https://registry.npmmirror.com
 
 # 复制 package 文件
 COPY package*.json ./

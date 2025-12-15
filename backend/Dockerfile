@@ -6,6 +6,10 @@ FROM python:3.11-slim as development
 
 WORKDIR /app
 
+# 配置国内镜像源加速
+RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources && \
+    sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources
+
 # 安装系统依赖（libgl1 替代已废弃的 libgl1-mesa-glx）
 RUN apt-get update && apt-get install -y \
     gcc \
@@ -24,9 +28,9 @@ RUN apt-get update && apt-get install -y \
 # 复制依赖文件
 COPY requirements.txt .
 
-# 安装 Python 依赖
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# 安装 Python 依赖（使用阿里云镜像）
+RUN pip install --no-cache-dir --upgrade pip -i https://mirrors.aliyun.com/pypi/simple/ && \
+    pip install --no-cache-dir -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
 
 # 复制应用代码
 COPY . .
@@ -47,6 +51,10 @@ FROM python:3.11-slim as production
 
 WORKDIR /app
 
+# 配置国内镜像源加速
+RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources && \
+    sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources
+
 # 安装系统依赖（libgl1 替代已废弃的 libgl1-mesa-glx）
 RUN apt-get update && apt-get install -y \
     gcc \
@@ -65,9 +73,9 @@ RUN apt-get update && apt-get install -y \
 # 复制依赖文件
 COPY requirements.txt .
 
-# 安装 Python 依赖
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# 安装 Python 依赖（使用阿里云镜像）
+RUN pip install --no-cache-dir --upgrade pip -i https://mirrors.aliyun.com/pypi/simple/ && \
+    pip install --no-cache-dir -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
 
 # 复制应用代码
 COPY . .
