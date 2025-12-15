@@ -16,6 +16,8 @@ services:
       retries: 5
 
   # RabbitMQ Message Queue
+  # 注意：如果服务器已有 RabbitMQ 运行，可注释此服务，使用外部 RabbitMQ
+  # 并在 .env.production 中配置 RABBITMQ_URL 指向外部服务
   rabbitmq:
     image: rabbitmq:3.12-management-alpine
     container_name: idp-rabbitmq-prod
@@ -24,8 +26,8 @@ services:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-admin_password}
     ports:
-      - "5672:5672"   # AMQP port
-      - "15672:15672" # Management UI
+      - "${RABBITMQ_PORT:-5673}:5672"   # AMQP port
+      - "${RABBITMQ_MGMT_PORT:-15673}:15672" # Management UI (默认改为15673避免冲突)
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
