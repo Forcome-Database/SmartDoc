@@ -23,7 +23,7 @@ from app.schemas.rule import (
     RuleCreate, RuleUpdate, RuleListQuery, RuleListResponse, RuleListItem,
     RuleDetail, RuleVersionListResponse, RuleVersionItem, RuleConfigUpdate,
     RulePublishRequest, RuleRollbackRequest, SandboxTestRequest,
-    SandboxTestResponse, RuleResponse
+    SandboxTestResponse, RuleResponse, RuleImportData, RuleImportResponse
 )
 
 router = APIRouter(prefix="/rules", tags=["规则管理"])
@@ -383,6 +383,123 @@ async def create_rule(
         id=new_rule.id,
         message=f"规则创建成功，编码: {rule_code}"
     )
+
+
+@router.post("/import", response_model=RuleImportResponse, summary="导入规则")
+async def import_rule(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_architect)
+):
+    """
+    从JSON文件导入规则
+
+    - 仅Admin和Architect角色可访问
+    - 支持导入由导出功能生成的JSON文件
+    - 自动生成新的规则ID和编码
+    - 导入的规则配置将作为草稿版本
+
+    Args:
+        file: 上传的JSON文件
+        db: 数据库会话
+        current_user: 当前用户
+
+    Returns:
+        RuleImportResponse: 导入结果
+
+    Raises:
+        HTTPException: 400 - 文件格式错误或内容无效
+    """
+    # 验证文件类型
+    if not file.filename.endswith('.json'):
+        return RuleImportResponse(
+            success=False,
+            message="仅支持JSON文件格式"
+        )
+    
+    try:
+        # 读取并解析JSON内容
+        content = await file.read()
+        try:
+            import_data = json.loads(content.decode('utf-8'))
+        except json.JSONDecodeError as e:
+            return RuleImportResponse(
+                success=False,
+                message=f"JSON解析失败: {str(e)}"
+            )
+        
+        # 验证必要字段
+        if not isinstance(import_data, dict):
+            return RuleImportResponse(
+                success=False,
+                message="无效的规则数据格式"
+            )
+        
+        rule_name = import_data.get('name')
+        if not rule_name:
+            return RuleImportResponse(
+                success=False,
+                message="规则名称不能为空"
+            )
+        
+        # 生成新的规则ID和编码
+        rule_id = str(uuid.uuid4())
+        rule_code = generate_rule_code(rule_name)
+        
+        # 检查编码是否已存在
+        existing_rule = await db.execute(
+            select(Rule).where(Rule.code == rule_code)
+        )
+        if existing_rule.scalar_one_or_none():
+            rule_code = generate_rule_code(rule_name) + "_" + str(uuid.uuid4())[:4]
+        
+        # 提取规则配置
+        # 支持两种格式：current_config（导出格式）或直接的config字段
+        rule_config = import_data.get('current_config') or import_data.get('config') or {
+            "extraction_rules": [],
+            "validation_rules": [],
+            "llm_config": {}
+        }
+        
+        # 创建规则记录
+        new_rule = Rule(
+            id=rule_id,
+            name=rule_name,
+            code=rule_code,
+            document_type=import_data.get('document_type'),
+            current_version=None,
+            created_by=current_user.id
+        )
+        db.add(new_rule)
+        
+        # 创建草稿版本，包含导入的配置
+        initial_version = RuleVersion(
+            rule_id=rule_id,
+            version="V0.0",
+            status=RuleStatus.DRAFT,
+            config=rule_config
+        )
+        db.add(initial_version)
+        
+        await db.commit()
+        await db.refresh(new_rule)
+        
+        logger.info(f"规则导入成功: {rule_name} ({rule_code}), 操作人: {current_user.username}")
+        
+        return RuleImportResponse(
+            success=True,
+            id=new_rule.id,
+            code=new_rule.code,
+            message=f"规则导入成功，编码: {rule_code}"
+        )
+        
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"规则导入失败: {str(e)}")
+        return RuleImportResponse(
+            success=False,
+            message=f"导入失败: {str(e)}"
+        )
 
 
 @router.get("/{rule_id}", response_model=RuleDetail, summary="获取规则详情")

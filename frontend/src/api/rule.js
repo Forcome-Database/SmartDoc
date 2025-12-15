@@ -101,5 +101,16 @@ export const ruleAPI = {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 600000  // 沙箱测试需要更长的超时时间（60秒）
     })
+  },
+
+  /**
+   * 导入规则
+   * @param {FormData} formData - 包含JSON文件的FormData
+   * @returns {Promise} 导入结果
+   */
+  import(formData) {
+    return request.post('/v1/rules/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
   }
 }

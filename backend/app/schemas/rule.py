@@ -148,3 +148,21 @@ class RuleResponse(BaseModel):
     """规则操作响应"""
     id: str = Field(description="规则ID")
     message: str = Field(description="操作结果消息")
+
+
+class RuleImportData(BaseModel):
+    """规则导入数据"""
+    name: str = Field(..., min_length=1, max_length=100, description="规则名称")
+    document_type: Optional[str] = Field(default=None, description="文档类型")
+    current_config: Optional[Dict[str, Any]] = Field(default=None, description="规则配置")
+    
+    class Config:
+        extra = "ignore"  # 忽略导出文件中的其他字段（如id、code、created_at等）
+
+
+class RuleImportResponse(BaseModel):
+    """规则导入响应"""
+    success: bool = Field(description="是否成功")
+    id: Optional[str] = Field(default=None, description="导入后的规则ID")
+    code: Optional[str] = Field(default=None, description="导入后的规则编码")
+    message: str = Field(description="操作结果消息")

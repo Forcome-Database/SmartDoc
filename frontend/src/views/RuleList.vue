@@ -6,10 +6,22 @@
         <h1 class="text-2xl font-bold text-gray-800">规则管理</h1>
         <p class="text-gray-500 mt-1">管理文档处理规则的配置和版本</p>
       </div>
-      <a-button type="primary" size="large" @click="handleCreate">
-        <template #icon><PlusOutlined /></template>
-        新建规则
-      </a-button>
+      <a-space>
+        <a-upload
+          :show-upload-list="false"
+          :before-upload="handleImport"
+          accept=".json"
+        >
+          <a-button size="large">
+            <template #icon><ImportOutlined /></template>
+            导入规则
+          </a-button>
+        </a-upload>
+        <a-button type="primary" size="large" @click="handleCreate">
+          <template #icon><PlusOutlined /></template>
+          新建规则
+        </a-button>
+      </a-space>
     </div>
 
     <!-- 搜索和筛选 -->
@@ -197,6 +209,7 @@ import {
   DownOutlined,
   CopyOutlined,
   ExportOutlined,
+  ImportOutlined,
   DeleteOutlined
 } from '@ant-design/icons-vue'
 import { ruleAPI } from '@/api/rule'
@@ -413,6 +426,39 @@ const handleExport = async (record) => {
   } catch (error) {
     message.error('导出规则失败：' + (error.message || '未知错误'))
   }
+}
+
+// 导入规则
+const handleImport = async (file) => {
+  // 验证文件类型
+  if (!file.name.endsWith('.json')) {
+    message.error('仅支持JSON文件格式')
+    return false
+  }
+  
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    const response = await ruleAPI.import(formData)
+    
+    if (response.success) {
+      message.success(response.message || '规则导入成功')
+      // 刷新列表
+      fetchRules()
+      // 跳转到编辑页面
+      if (response.id) {
+        router.push(`/rules/${response.id}/edit`)
+      }
+    } else {
+      message.error(response.message || '规则导入失败')
+    }
+  } catch (error) {
+    message.error('导入规则失败：' + (error.message || '未知错误'))
+  }
+  
+  // 返回false阻止默认上传行为
+  return false
 }
 
 // 删除规则
