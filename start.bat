@@ -1,7 +1,31 @@
 @echo off
 chcp 65001 >nul
+
+:: 检查参数
+if "%1"=="" goto :usage
+if "%1"=="dev" goto :dev
+if "%1"=="prod" goto :prod
+goto :usage
+
+:usage
 echo ========================================
-echo  Enterprise IDP Platform - 开发环境启动
+echo  智能文档处理中台 - 启动脚本
+echo ========================================
+echo.
+echo 用法: start.bat [dev^|prod]
+echo.
+echo   dev   - 启动开发环境 (本地服务)
+echo   prod  - 启动生产环境 (Docker Compose)
+echo.
+echo 示例:
+echo   start.bat dev
+echo   start.bat prod
+echo.
+goto :eof
+
+:dev
+echo ========================================
+echo  智能文档处理中台 - 开发环境启动
 echo ========================================
 echo.
 
@@ -41,10 +65,8 @@ start "Frontend Server" cmd /k "cd frontend && npm run dev"
 
 echo.
 echo ========================================
-echo  服务启动完成！
+echo  开发环境启动完成！
 echo ========================================
-echo.
-echo 当前环境: 开发环境 (development)
 echo.
 echo 后端服务: http://localhost:8000
 echo API 文档: http://localhost:8000/api/docs
@@ -55,5 +77,29 @@ echo   - OCR Worker (处理OCR任务)
 echo   - Pipeline Worker (处理数据管道)
 echo   - Push Worker (处理Webhook推送)
 echo.
-echo 按任意键关闭此窗口...
-pause >nul
+goto :eof
+
+:prod
+echo ========================================
+echo  智能文档处理中台 - 生产环境启动
+echo ========================================
+echo.
+
+echo [1/2] 加载生产环境配置...
+copy /Y "backend\.env.production" "backend\.env" >nul
+echo 已加载: backend\.env.production -^> backend\.env
+echo.
+
+echo [2/2] 启动 Docker Compose 服务...
+docker-compose up -d
+
+echo.
+echo ========================================
+echo  生产环境启动完成！
+echo ========================================
+echo.
+echo 查看服务状态: docker-compose ps
+echo 查看服务日志: docker-compose logs -f
+echo 停止所有服务: docker-compose down
+echo.
+goto :eof

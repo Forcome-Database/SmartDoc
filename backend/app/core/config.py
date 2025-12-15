@@ -113,5 +113,7 @@ class Settings(BaseSettings):
         case_sensitive = True
 
 
-# 创建全局配置实例
-settings = Settings()
+# 根据 ENV_FILE 环境变量动态加载配置文件
+import os
+_env_file = os.getenv("ENV_FILE", ".env")
+settings = Settings(_env_file=_env_file)
