@@ -310,7 +310,7 @@ async def process_single_file(
             status=TaskStatus.QUEUED.value,
             estimated_wait_seconds=estimated_wait_seconds,
             # 临时存储发布所需数据
-            _pending_publish={
+            pending_publish={
                 "task_id": task_id,
                 "file_path": file_path,
                 "rule_id": actual_rule_id,
@@ -403,16 +403,16 @@ async def upload_file(
             await db.commit()
             
             # 事务提交后，发布消息到队列
-            if hasattr(result, '_pending_publish') and result._pending_publish:
+            if result.pending_publish:
                 try:
-                    logger.info(f"准备发布任务到队列: {result._pending_publish['task_id']}")
+                    logger.info(f"准备发布任务到队列: {result.pending_publish['task_id']}")
                     rabbitmq = await get_rabbitmq()
                     success = await rabbitmq.publish_task(
                         queue_name=settings.RABBITMQ_QUEUE_OCR,
-                        task_data=result._pending_publish
+                        task_data=result.pending_publish
                     )
                     if not success:
-                        logger.error(f"任务发布到队列失败: {result._pending_publish['task_id']}")
+                        logger.error(f"任务发布到队列失败: {result.pending_publish['task_id']}")
                 except Exception as e:
                     logger.error(f"任务发布异常: {str(e)}", exc_info=True)
             
@@ -443,8 +443,8 @@ async def upload_file(
                 if not result.error:
                     success_count += 1
                     # 收集待发布的任务
-                    if hasattr(result, '_pending_publish') and result._pending_publish:
-                        pending_publishes.append(result._pending_publish)
+                    if result.pending_publish:
+                        pending_publishes.append(result.pending_publish)
             except Exception as e:
                 logger.error(f"处理文件 {upload_file.filename} 失败: {str(e)}")
                 results.append(UploadResultItem(
