@@ -79,8 +79,7 @@ frontend/dist/
 # Backend
 backend/.env
 backend/.env.local
-backend/.env.development
-backend/.env.production
+
 # 注意：环境配置文件包含敏感信息，不应提交到版本控制
 # 请使用 backend/.env.example 作为模板
 # 注意：迁移脚本应该被提交到版本控制
