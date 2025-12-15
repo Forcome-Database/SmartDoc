@@ -238,20 +238,15 @@ class DataEncryption:
     
     def __init__(self):
         """初始化加密器"""
-        # 如果配置中有加密密钥，使用配置的密钥
-        # 否则使用SECRET_KEY派生加密密钥
-        if settings.ENCRYPTION_KEY:
-            encryption_key = settings.ENCRYPTION_KEY.encode()
-        else:
-            # 使用PBKDF2从SECRET_KEY派生加密密钥
-            kdf = PBKDF2HMAC(
-                algorithm=hashes.SHA256(),
-                length=32,
-                salt=b'idp_platform_salt',  # 固定salt，生产环境应使用配置
-                iterations=100000,
-                backend=default_backend()
-            )
-            encryption_key = kdf.derive(settings.SECRET_KEY.encode())
+        # 始终使用PBKDF2从SECRET_KEY派生加密密钥（更安全、更简单）
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=b'idp_platform_salt',  # 固定salt
+            iterations=100000,
+            backend=default_backend()
+        )
+        encryption_key = kdf.derive(settings.SECRET_KEY.encode())
         
         # 创建Fernet加密器（使用AES-256）
         self.cipher = Fernet(base64.urlsafe_b64encode(encryption_key))
