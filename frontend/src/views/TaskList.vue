@@ -257,14 +257,14 @@ const columns = [
     title: '任务ID',
     dataIndex: 'id',
     key: 'id',
-    width: 180,
+    width: 280,
     fixed: 'left'
   },
   {
     title: '文件名',
     dataIndex: 'file_name',
     key: 'file_name',
-    width: 250,
+    width: 200,
     ellipsis: true
   },
   {
@@ -277,7 +277,7 @@ const columns = [
   {
     title: '规则版本',
     key: 'rule_version',
-    width: 200
+    width: 150
   },
   {
     title: '置信度',

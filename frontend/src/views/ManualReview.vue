@@ -281,13 +281,13 @@ const columns = [
   {
     title: '任务ID',
     key: 'id',
-    width: 120
+    width: 220
   },
   {
     title: '文件名',
     key: 'file_name',
     ellipsis: true,
-    width: 180
+    width: 160
   },
   {
     title: '规则',

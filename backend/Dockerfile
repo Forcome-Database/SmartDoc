@@ -82,8 +82,8 @@ COPY . .
 
 # 创建非 root 用户
 RUN useradd -m -u 1000 appuser && \
-    mkdir -p /tmp/uploads /tmp/processing && \
-    chown -R appuser:appuser /app /tmp/uploads /tmp/processing
+    mkdir -p /tmp/uploads /tmp/processing /tmp/pipeline_venvs && \
+    chown -R appuser:appuser /app /tmp/uploads /tmp/processing /tmp/pipeline_venvs
 
 # 切换到非 root 用户
 USER appuser
