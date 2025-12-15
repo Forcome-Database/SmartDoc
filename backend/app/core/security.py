@@ -234,58 +234,57 @@ def mask_api_key_secret(secret: str, visible_chars: int = 8) -> str:
 # ============================================================================
 
 class DataEncryption:
-    """数据加密服务类"""
+    """数据加密服务类（可选功能）"""
     
     def __init__(self):
         """初始化加密器"""
-        # 始终使用PBKDF2从SECRET_KEY派生加密密钥（更安全、更简单）
-        kdf = PBKDF2HMAC(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=b'idp_platform_salt',  # 固定salt
-            iterations=100000,
-            backend=default_backend()
-        )
-        encryption_key = kdf.derive(settings.SECRET_KEY.encode())
+        self.cipher = None
+        self.enabled = False
         
-        # 创建Fernet加密器（使用AES-256）
-        self.cipher = Fernet(base64.urlsafe_b64encode(encryption_key))
+        # 如果没有配置 SECRET_KEY 或为默认值，禁用加密功能
+        if not settings.SECRET_KEY or settings.SECRET_KEY.startswith('prod-secret-key'):
+            return
+        
+        try:
+            # 使用PBKDF2从SECRET_KEY派生加密密钥
+            kdf = PBKDF2HMAC(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=b'idp_platform_salt',
+                iterations=100000,
+                backend=default_backend()
+            )
+            derived_key = kdf.derive(settings.SECRET_KEY.encode())
+            fernet_key = base64.urlsafe_b64encode(derived_key)
+            self.cipher = Fernet(fernet_key)
+            self.enabled = True
+        except Exception:
+            # 初始化失败，禁用加密功能
+            pass
     
     def encrypt(self, plaintext: str) -> str:
-        """
-        使用AES-256加密数据
-        
-        Args:
-            plaintext: 明文字符串
-            
-        Returns:
-            加密后的Base64编码字符串
-        """
+        """加密数据，如果加密功能禁用则返回原文"""
         if not plaintext:
             return ""
+        if not self.enabled:
+            return plaintext
         
         encrypted_bytes = self.cipher.encrypt(plaintext.encode())
         return encrypted_bytes.decode()
     
     def decrypt(self, ciphertext: str) -> str:
-        """
-        使用AES-256解密数据
-        
-        Args:
-            ciphertext: 加密后的Base64编码字符串
-            
-        Returns:
-            解密后的明文字符串
-        """
+        """解密数据，如果加密功能禁用则返回原文"""
         if not ciphertext:
             return ""
+        if not self.enabled:
+            return ciphertext
         
         try:
             decrypted_bytes = self.cipher.decrypt(ciphertext.encode())
             return decrypted_bytes.decode()
         except Exception:
-            # 解密失败，返回空字符串
-            return ""
+            # 解密失败，返回原文（可能是未加密的数据）
+            return ciphertext
 
 
 # 创建全局加密器实例
