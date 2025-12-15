@@ -1,0 +1,113 @@
+version: '3.8'
+
+# Development environment overrides with hot reload
+# 使用外部 MySQL、MinIO、UmiOCR 服务（配置在 backend/.env 中）
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    env_file:
+      - ./backend/.env
+    environment:
+      ENVIRONMENT: development
+      LOG_LEVEL: debug
+      DEBUG: true
+      DB_POOL_SIZE: 5
+      DB_MAX_OVERFLOW: 5
+      OCR_MAX_PARALLEL: 2
+      ACCESS_TOKEN_EXPIRE_MINUTES: 1440
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+      - /app/.pytest_cache
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+
+  # Vite dev server（内部服务，不对外暴露）
+  vite:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host
+
+  # Nginx 反向代理（开发环境入口）
+  frontend:
+    image: nginx:alpine
+    container_name: idp-frontend-dev
+    volumes:
+      - ./frontend/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+      - vite
+
+  # OCR Worker (for development)
+  ocr-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    env_file:
+      - ./backend/.env
+    environment:
+      ENVIRONMENT: development
+      LOG_LEVEL: debug
+      OCR_MAX_PARALLEL: 2
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+    depends_on:
+      - redis
+      - rabbitmq
+    command: python -m app.tasks.ocr_worker
+    deploy:
+      replicas: 1
+
+  # Pipeline Worker (for development)
+  pipeline-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    env_file:
+      - ./backend/.env
+    environment:
+      ENVIRONMENT: development
+      LOG_LEVEL: debug
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+      - pipeline_venvs:/tmp/pipeline_venvs
+    depends_on:
+      - redis
+      - rabbitmq
+    command: python -m app.tasks.pipeline_worker
+
+  # Push Worker (for development)
+  push-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    env_file:
+      - ./backend/.env
+    environment:
+      ENVIRONMENT: development
+      LOG_LEVEL: debug
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+    depends_on:
+      - redis
+      - rabbitmq
+    command: python -m app.tasks.push_worker

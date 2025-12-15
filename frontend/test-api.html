@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 连接测试</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1890ff;
+            margin-bottom: 30px;
+        }
+        .test-item {
+            margin: 15px 0;
+            padding: 15px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            background: #fafafa;
+        }
+        .test-item h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.pending {
+            background: #e6f7ff;
+            color: #1890ff;
+        }
+        .status.success {
+            background: #f6ffed;
+            color: #52c41a;
+        }
+        .status.error {
+            background: #fff1f0;
+            color: #ff4d4f;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        button {
+            background: #1890ff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #40a9ff;
+        }
+        button:disabled {
+            background: #d9d9d9;
+            cursor: not-allowed;
+        }
+        .info {
+            background: #e6f7ff;
+            border: 1px solid #91d5ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 API 连接测试工具</h1>
+        
+        <div class="info">
+            <strong>使用说明：</strong><br>
+            1. 确保后端服务已启动（http://localhost:8000）<br>
+            2. 点击"开始测试"按钮<br>
+            3. 查看每个 API 的响应状态和时间<br>
+            4. 如果所有测试都成功，说明后端正常，问题可能在前端认证
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <button onclick="runAllTests()">开始测试</button>
+            <button onclick="clearResults()">清除结果</button>
+        </div>
+
+        <div id="tests"></div>
+    </div>
+
+    <script>
+        const tests = [
+            {
+                name: '健康检查',
+                url: 'http://localhost:8000/health',
+                method: 'GET',
+                needsAuth: false
+            },
+            {
+                name: '根路径',
+                url: 'http://localhost:8000/',
+                method: 'GET',
+                needsAuth: false
+            },
+            {
+                name: 'API 文档',
+                url: 'http://localhost:8000/api/docs',
+                method: 'GET',
+                needsAuth: false
+            },
+            {
+                name: '仪表盘指标（需要认证）',
+                url: 'http://localhost:8000/api/v1/dashboard/metrics',
+                method: 'GET',
+                needsAuth: true
+            },
+            {
+                name: '任务列表（需要认证）',
+                url: 'http://localhost:8000/api/v1/tasks',
+                method: 'GET',
+                needsAuth: true
+            }
+        ];
+
+        function createTestItem(test, index) {
+            return `
+                <div class="test-item" id="test-${index}">
+                    <h3>${test.name}</h3>
+                    <div>
+                        <strong>URL:</strong> ${test.url}<br>
+                        <strong>方法:</strong> ${test.method}<br>
+                        <strong>需要认证:</strong> ${test.needsAuth ? '是' : '否'}<br>
+                        <strong>状态:</strong> <span class="status pending" id="status-${index}">等待测试</span>
+                    </div>
+                    <div class="result" id="result-${index}" style="display: none;"></div>
+                </div>
+            `;
+        }
+
+        function initTests() {
+            const container = document.getElementById('tests');
+            container.innerHTML = tests.map((test, index) => createTestItem(test, index)).join('');
+        }
+
+        async function runTest(test, index) {
+            const statusEl = document.getElementById(`status-${index}`);
+            const resultEl = document.getElementById(`result-${index}`);
+            
+            statusEl.className = 'status pending';
+            statusEl.textContent = '测试中...';
+            resultEl.style.display = 'none';
+
+            const startTime = performance.now();
+            
+            try {
+                const headers = {};
+                if (test.needsAuth) {
+                    const token = localStorage.getItem('access_token');
+                    if (token) {
+                        headers['Authorization'] = `Bearer ${token}`;
+                    }
+                }
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
+
+                const response = await fetch(test.url, {
+                    method: test.method,
+                    headers: headers,
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+                const elapsed = (performance.now() - startTime).toFixed(0);
+
+                let body = '';
+                const contentType = response.headers.get('content-type');
+                
+                if (contentType && contentType.includes('application/json')) {
+                    const json = await response.json();
+                    body = JSON.stringify(json, null, 2);
+                } else {
+                    body = await response.text();
+                    if (body.length > 200) {
+                        body = body.substring(0, 200) + '...(已截断)';
+                    }
+                }
+
+                if (response.ok) {
+                    statusEl.className = 'status success';
+                    statusEl.textContent = `✓ 成功 (${elapsed}ms)`;
+                    resultEl.textContent = `状态码: ${response.status}\n响应时间: ${elapsed}ms\n\n响应内容:\n${body}`;
+                } else {
+                    statusEl.className = 'status error';
+                    statusEl.textContent = `✗ 失败 (${response.status})`;
+                    resultEl.textContent = `状态码: ${response.status}\n响应时间: ${elapsed}ms\n\n错误信息:\n${body}`;
+                }
+                
+                resultEl.style.display = 'block';
+
+            } catch (error) {
+                const elapsed = (performance.now() - startTime).toFixed(0);
+                statusEl.className = 'status error';
+                
+                if (error.name === 'AbortError') {
+                    statusEl.textContent = '✗ 超时 (>10s)';
+                    resultEl.textContent = `请求超时（超过10秒）\n\n可能原因：\n1. 后端服务未启动\n2. 端口不正确\n3. 后端处理请求时阻塞`;
+                } else {
+                    statusEl.textContent = `✗ 错误 (${elapsed}ms)`;
+                    resultEl.textContent = `错误类型: ${error.name}\n错误信息: ${error.message}\n\n可能原因：\n1. 后端服务未启动\n2. CORS 配置问题\n3. 网络连接问题`;
+                }
+                
+                resultEl.style.display = 'block';
+            }
+        }
+
+        async function runAllTests() {
+            for (let i = 0; i < tests.length; i++) {
+                await runTest(tests[i], i);
+                // 稍微延迟，避免请求过快
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+
+        function clearResults() {
+            initTests();
+        }
+
+        // 页面加载时初始化
+        window.onload = () => {
+            initTests();
+            
+            // 显示当前的 token 状态
+            const token = localStorage.getItem('access_token');
+            if (token) {
+                console.log('发现 Token:', token.substring(0, 20) + '...');
+            } else {
+                console.log('未找到 Token，需要认证的 API 将返回 401');
+            }
+        };
+    </script>
+</body>
+</html>

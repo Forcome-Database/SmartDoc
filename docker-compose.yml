@@ -1,0 +1,154 @@
+services:
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: idp-redis-prod
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password}
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ Message Queue
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: idp-rabbitmq-prod
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-admin_password}
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: idp-backend-prod
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env.production
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_temp:/tmp
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+
+
+  # OCR Worker（使用 replicas 时不能设置 container_name）
+  ocr-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env.production
+    volumes:
+      - worker_temp:/tmp
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    deploy:
+      replicas: 2
+    command: python -m app.tasks.ocr_worker
+
+  # Pipeline Worker (数据处理管道)
+  pipeline-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: idp-pipeline-worker-prod
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env.production
+    volumes:
+      - pipeline_venvs:/tmp/pipeline_venvs
+      - pipeline_temp:/tmp
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    command: python -m app.tasks.pipeline_worker
+
+  # Push Worker
+  push-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: idp-push-worker-prod
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env.production
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    command: python -m app.tasks.push_worker
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: idp-frontend-prod
+    restart: unless-stopped
+    ports:
+      - "85:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  redis_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  backend_temp:
+    driver: local
+  worker_temp:
+    driver: local
+  pipeline_venvs:
+    driver: local
+  pipeline_temp:
+    driver: local
