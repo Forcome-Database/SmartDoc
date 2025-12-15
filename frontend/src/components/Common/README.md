@@ -493,7 +493,8 @@ const handleSubmit = async () => {
 
   try {
     const formData = new FormData()
-    formData.append('file', selectedFile.value)
+    // 统一使用 files 字段名（支持单个或多个文件）
+    formData.append('files', selectedFile.value)
     formData.append('rule_id', 'RULE001')
 
     // 模拟上传进度

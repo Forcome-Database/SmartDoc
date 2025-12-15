@@ -23,13 +23,16 @@ export const taskAPI = {
   },
 
   /**
-   * Upload file for OCR processing
-   * @param {FormData} formData - Form data with file and rule_id
-   * @returns {Promise} Upload response with task_id
+   * Upload file(s) for OCR processing
+   * 支持单文件和多文件上传
+   * @param {FormData} formData - Form data with files and rule_id
+   * @param {Function} onProgress - 上传进度回调
+   * @returns {Promise} Upload response (UploadResponse or BatchUploadResponse)
    */
-  upload(formData) {
+  upload(formData, onProgress) {
     return request.post('/v1/ocr/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: onProgress
     })
   },
 

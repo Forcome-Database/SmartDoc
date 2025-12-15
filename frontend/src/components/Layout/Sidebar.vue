@@ -73,7 +73,8 @@ import {
   TeamOutlined,
   SettingOutlined,
   MenuFoldOutlined,
-  MenuUnfoldOutlined
+  MenuUnfoldOutlined,
+  CloudUploadOutlined
 } from '@ant-design/icons-vue'
 import { useAuthStore } from '@/stores'
 
@@ -116,6 +117,12 @@ const menuConfig = [
     icon: ApiOutlined
     // 临时移除角色限制用于测试
     // roles: ['admin', 'architect']
+  },
+  {
+    key: '/upload',
+    label: '文档上传',
+    icon: CloudUploadOutlined,
+    roles: ['admin', 'architect', 'auditor', 'visitor']
   },
   {
     key: '/tasks',

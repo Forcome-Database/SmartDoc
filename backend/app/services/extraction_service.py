@@ -321,11 +321,23 @@ class ExtractionService:
             # 从LLM结果中提取数据（保持原始嵌套结构）
             extracted_data = llm_result.get('data', {})
 
-            # 直接返回LLM的原始结构，每个顶层字段作为一个结果
+            # 过滤并返回LLM结果，只保留Schema中定义的字段
             results = {}
             for field_key, field_value in extracted_data.items():
+                # 检查字段是否在Schema中定义
+                if field_key not in schema:
+                    logger.warning(f"LLM返回了Schema中未定义的字段: {field_key}，已忽略")
+                    continue
+                
                 # 获取字段的schema定义用于置信度计算
                 field_schema = schema.get(field_key, {})
+                
+                # 如果是数组/表格类型，过滤数组元素中的未定义字段
+                node_type = field_schema.get('nodeType', 'field')
+                if node_type in ('array', 'table') and isinstance(field_value, list):
+                    items_schema = field_schema.get('items', field_schema.get('columns', {}))
+                    if items_schema:
+                        field_value = self._filter_array_fields(field_value, items_schema)
 
                 # 动态计算置信度
                 confidence = self._calculate_llm_confidence(
@@ -348,6 +360,43 @@ class ExtractionService:
             import traceback
             traceback.print_exc()
             return {}, llm_stats
+
+    def _filter_array_fields(
+        self,
+        array_data: List[Any],
+        items_schema: Dict[str, Any]
+    ) -> List[Any]:
+        """
+        过滤数组元素中Schema未定义的字段
+        
+        Args:
+            array_data: 数组数据
+            items_schema: 数组元素的Schema定义
+            
+        Returns:
+            过滤后的数组数据
+        """
+        if not array_data or not items_schema:
+            return array_data
+        
+        filtered_array = []
+        defined_fields = set(items_schema.keys())
+        
+        for item in array_data:
+            if isinstance(item, dict):
+                # 只保留Schema中定义的字段
+                filtered_item = {}
+                for key, value in item.items():
+                    if key in defined_fields:
+                        filtered_item[key] = value
+                    else:
+                        logger.warning(f"LLM返回了数组元素中未定义的字段: {key}，已忽略")
+                filtered_array.append(filtered_item)
+            else:
+                # 非字典类型直接保留
+                filtered_array.append(item)
+        
+        return filtered_array
 
     def _flatten_extraction_results(
         self,

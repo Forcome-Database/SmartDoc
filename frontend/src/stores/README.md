@@ -416,10 +416,13 @@ watch(() => taskStore.filters, async () => {
   await taskStore.fetchTasks()
 }, { deep: true })
 
-// 上传文件
-async function uploadFile(file, ruleId) {
+// 上传文件（支持单个或多个文件）
+async function uploadFile(fileList, ruleId) {
   const formData = new FormData()
-  formData.append('file', file)
+  // 统一使用 files 字段名，支持单个或多个文件
+  fileList.forEach(file => {
+    formData.append('files', file)
+  })
   formData.append('rule_id', ruleId)
   
   const response = await taskStore.uploadFile(formData)

@@ -164,24 +164,29 @@ class RabbitMQClient:
             
             async with queue.iterator() as queue_iter:
                 async for message in queue_iter:
-                    async with message.process():
+                    task_data = None
+                    try:
+                        # 解析消息体
+                        task_data = json.loads(message.body.decode())
+                        
+                        # 调用回调函数处理任务
+                        await callback(task_data)
+                        
+                        # 消息处理成功，手动ACK
+                        await message.ack()
+                        logger.info(f"任务处理成功并已确认: {task_data.get('task_id', 'unknown')}")
+                        
+                    except Exception as e:
+                        task_id = task_data.get('task_id', 'unknown') if task_data else 'unknown'
+                        logger.error(f"任务处理失败 [{task_id}]: {str(e)}", exc_info=True)
+                        # 消息处理失败，NACK但不重新入队（避免无限重试）
                         try:
-                            # 解析消息体
-                            task_data = json.loads(message.body.decode())
-                            
-                            # 调用回调函数处理任务
-                            await callback(task_data)
-                            
-                            # 消息处理成功，自动ACK
-                            logger.info(f"任务处理成功: {task_data.get('task_id', 'unknown')}")
-                            
-                        except Exception as e:
-                            logger.error(f"任务处理失败: {str(e)}")
-                            # 消息处理失败，NACK但不重新入队
                             await message.nack(requeue=False)
+                        except Exception as nack_error:
+                            logger.error(f"NACK失败: {str(nack_error)}")
                             
         except Exception as e:
-            logger.error(f"消费队列失败 [{queue_name}]: {str(e)}")
+            logger.error(f"消费队列失败 [{queue_name}]: {str(e)}", exc_info=True)
             raise
     
     async def get_queue_size(self, queue_name: str) -> int:

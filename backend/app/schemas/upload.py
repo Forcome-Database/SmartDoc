@@ -2,11 +2,11 @@
 文件上传相关的Schema定义
 """
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 
 
 class UploadResponse(BaseModel):
-    """文件上传响应"""
+    """单文件上传响应"""
     task_id: str = Field(..., description="任务ID")
     is_instant: bool = Field(..., description="是否秒传")
     status: str = Field(..., description="任务状态")
@@ -54,5 +54,37 @@ class TaskDetailResponse(BaseModel):
                 "completed_at": "2025-12-14T10:30:15",
                 "extracted_data": {"invoice_no": "INV-001", "amount": 1000.50},
                 "confidence_scores": {"invoice_no": 95, "amount": 88}
+            }
+        }
+
+
+class UploadResultItem(BaseModel):
+    """单个文件上传结果"""
+    file_name: str = Field(..., description="文件名")
+    task_id: Optional[str] = Field(None, description="任务ID，失败时为空")
+    is_instant: bool = Field(False, description="是否秒传")
+    status: str = Field(..., description="状态: queued/completed/failed")
+    estimated_wait_seconds: int = Field(0, description="预估等待时间（秒）")
+    error: Optional[str] = Field(None, description="错误信息，成功时为空")
+
+
+class BatchUploadResponse(BaseModel):
+    """批量上传响应"""
+    total: int = Field(..., description="总文件数")
+    success_count: int = Field(..., description="成功数")
+    failed_count: int = Field(..., description="失败数")
+    results: List[UploadResultItem] = Field(..., description="每个文件的上传结果")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "total": 3,
+                "success_count": 2,
+                "failed_count": 1,
+                "results": [
+                    {"file_name": "doc1.pdf", "task_id": "T_20251215_001", "is_instant": False, "status": "queued", "estimated_wait_seconds": 10},
+                    {"file_name": "doc2.pdf", "task_id": "T_20251215_002", "is_instant": True, "status": "completed", "estimated_wait_seconds": 0},
+                    {"file_name": "doc3.pdf", "task_id": None, "is_instant": False, "status": "failed", "error": "文件大小超过限制"}
+                ]
             }
         }

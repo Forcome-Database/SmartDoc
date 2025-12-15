@@ -70,9 +70,11 @@ await ruleAPI.delete('RULE001')
 ### 3. 文件上传
 
 ```javascript
-// 创建FormData
+// 创建FormData（支持单个或多个文件）
 const formData = new FormData()
-formData.append('file', file)
+// 统一使用 files 字段名
+formData.append('files', file1)
+formData.append('files', file2)  // 可选，支持多文件
 formData.append('rule_id', 'RULE001')
 
 // 上传文件

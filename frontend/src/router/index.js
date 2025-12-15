@@ -68,6 +68,15 @@ const routes = [
         }
       },
       {
+        path: 'upload',
+        name: 'DocumentUpload',
+        component: () => import('@/views/DocumentUpload.vue'),
+        meta: { 
+          title: '文档上传',
+          icon: 'CloudUploadOutlined'
+        }
+      },
+      {
         path: 'tasks',
         name: 'TaskList',
         component: () => import('@/views/TaskList.vue'),
