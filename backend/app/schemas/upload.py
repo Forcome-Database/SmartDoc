@@ -66,6 +66,12 @@ class UploadResultItem(BaseModel):
     status: str = Field(..., description="状态: queued/completed/failed")
     estimated_wait_seconds: int = Field(0, description="预估等待时间（秒）")
     error: Optional[str] = Field(None, description="错误信息，成功时为空")
+    # 内部使用：待发布到队列的任务数据，不会序列化到响应中
+    _pending_publish: Optional[dict] = None
+    
+    class Config:
+        # 允许私有属性
+        underscore_attrs_are_private = True
 
 
 class BatchUploadResponse(BaseModel):

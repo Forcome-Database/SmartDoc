@@ -294,52 +294,38 @@ async def process_single_file(
     db.add(new_task)
     await db.flush()
     
-    # 9. 发布任务到消息队列
+    # 9. 计算预估等待时间（消息发布移到事务提交后）
     try:
-        logger.info(f"准备发布任务到队列: {task_id}")
         rabbitmq = await get_rabbitmq()
-        task_data = {
-            "task_id": task_id,
-            "file_path": file_path,
-            "rule_id": actual_rule_id,
-            "rule_version": target_version,
-            "page_count": page_count
-        }
-        
-        success = await rabbitmq.publish_task(
-            queue_name=settings.RABBITMQ_QUEUE_OCR,
-            task_data=task_data
-        )
-        
-        if not success:
-            logger.error(f"任务发布到队列失败: {task_id}")
-            return UploadResultItem(
-                file_name=file.filename,
-                task_id=task_id,
-                status="failed",
-                error="任务发布到队列失败"
-            )
-        
-        # 计算预估等待时间
         queue_length = await rabbitmq.get_queue_size(settings.RABBITMQ_QUEUE_OCR)
         estimated_wait_seconds = await calculate_estimated_wait_time(page_count, queue_length)
         
         logger.info(f"任务创建完成: {task_id}, 预估等待: {estimated_wait_seconds}秒")
+        
+        # 返回待发布的任务信息，消息发布将在事务提交后执行
         return UploadResultItem(
             file_name=file.filename,
             task_id=task_id,
             is_instant=False,
             status=TaskStatus.QUEUED.value,
-            estimated_wait_seconds=estimated_wait_seconds
+            estimated_wait_seconds=estimated_wait_seconds,
+            # 临时存储发布所需数据
+            _pending_publish={
+                "task_id": task_id,
+                "file_path": file_path,
+                "rule_id": actual_rule_id,
+                "rule_version": target_version,
+                "page_count": page_count
+            }
         )
         
     except Exception as e:
-        logger.error(f"任务发布异常 [{task_id}]: {str(e)}", exc_info=True)
+        logger.error(f"任务创建异常 [{task_id}]: {str(e)}", exc_info=True)
         return UploadResultItem(
             file_name=file.filename,
             task_id=task_id,
             status="failed",
-            error=f"任务发布失败: {str(e)}"
+            error=f"任务创建失败: {str(e)}"
         )
 
 
@@ -406,14 +392,29 @@ async def upload_file(
                 db=db
             )
             
-            await db.commit()
-            
             # 如果处理失败，抛出异常
             if result.error:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=result.error
                 )
+            
+            # 先提交事务，确保任务记录已持久化
+            await db.commit()
+            
+            # 事务提交后，发布消息到队列
+            if hasattr(result, '_pending_publish') and result._pending_publish:
+                try:
+                    logger.info(f"准备发布任务到队列: {result._pending_publish['task_id']}")
+                    rabbitmq = await get_rabbitmq()
+                    success = await rabbitmq.publish_task(
+                        queue_name=settings.RABBITMQ_QUEUE_OCR,
+                        task_data=result._pending_publish
+                    )
+                    if not success:
+                        logger.error(f"任务发布到队列失败: {result._pending_publish['task_id']}")
+                except Exception as e:
+                    logger.error(f"任务发布异常: {str(e)}", exc_info=True)
             
             return UploadResponse(
                 task_id=result.task_id,
@@ -426,6 +427,7 @@ async def upload_file(
         # 多文件上传：返回批量响应
         results = []
         success_count = 0
+        pending_publishes = []
         
         for upload_file in all_files:
             try:
@@ -440,6 +442,9 @@ async def upload_file(
                 results.append(result)
                 if not result.error:
                     success_count += 1
+                    # 收集待发布的任务
+                    if hasattr(result, '_pending_publish') and result._pending_publish:
+                        pending_publishes.append(result._pending_publish)
             except Exception as e:
                 logger.error(f"处理文件 {upload_file.filename} 失败: {str(e)}")
                 results.append(UploadResultItem(
@@ -448,7 +453,23 @@ async def upload_file(
                     error=str(e)
                 ))
         
+        # 先提交事务，确保所有任务记录已持久化
         await db.commit()
+        
+        # 事务提交后，批量发布消息到队列
+        if pending_publishes:
+            try:
+                rabbitmq = await get_rabbitmq()
+                for task_data in pending_publishes:
+                    logger.info(f"准备发布任务到队列: {task_data['task_id']}")
+                    success = await rabbitmq.publish_task(
+                        queue_name=settings.RABBITMQ_QUEUE_OCR,
+                        task_data=task_data
+                    )
+                    if not success:
+                        logger.error(f"任务发布到队列失败: {task_data['task_id']}")
+            except Exception as e:
+                logger.error(f"批量任务发布异常: {str(e)}", exc_info=True)
         
         return BatchUploadResponse(
             total=len(all_files),
