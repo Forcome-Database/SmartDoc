@@ -55,6 +55,9 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    # dns:
+    #   - 8.8.8.8
+    #   - 114.114.114.114
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -82,6 +85,9 @@ services:
         condition: service_healthy
     deploy:
       replicas: 2
+    # dns:
+    #   - 8.8.8.8
+    #   - 114.114.114.114
     command: python -m app.tasks.ocr_worker
 
   # Pipeline Worker (数据处理管道)

@@ -703,7 +703,13 @@ class OCRWorker:
             schema = rule_config.get('schema', {})
             validation_rules = rule_config.get('validation_rules', [])
             
-            logger.info(f"开始数据校验: {len(validation_rules)} 个规则")
+            # 自动根据Schema的required字段生成必填校验规则
+            auto_required_rules = self._generate_required_rules_from_schema(schema)
+            
+            # 合并用户配置的规则和自动生成的必填规则
+            all_validation_rules = auto_required_rules + validation_rules
+            
+            logger.info(f"开始数据校验: {len(all_validation_rules)} 个规则 (自动必填: {len(auto_required_rules)}, 用户配置: {len(validation_rules)})")
             
             data = cleaned_data.get('data', {})
             
@@ -716,7 +722,7 @@ class OCRWorker:
             # 执行校验规则
             validation_result = self.validation_service.validate(
                 data=converted_data,
-                validation_rules=validation_rules
+                validation_rules=all_validation_rules
             )
             
             # 添加类型转换的警告
@@ -739,6 +745,51 @@ class OCRWorker:
         except Exception as e:
             logger.error(f"数据校验失败: {str(e)}")
             raise
+    
+    def _generate_required_rules_from_schema(
+        self,
+        schema: Dict[str, Any],
+        parent_path: str = ''
+    ) -> List[Dict[str, Any]]:
+        """
+        根据Schema的required字段自动生成必填校验规则
+        
+        Args:
+            schema: Schema定义
+            parent_path: 父路径（用于嵌套字段）
+            
+        Returns:
+            必填校验规则列表
+        """
+        rules = []
+        
+        for field_key, field_def in schema.items():
+            field_path = f"{parent_path}.{field_key}" if parent_path else field_key
+            node_type = field_def.get('nodeType', 'field')
+            is_required = field_def.get('required', False)
+            
+            # 如果字段标记为必填，生成校验规则
+            if is_required:
+                rules.append({
+                    'field': field_path,
+                    'required': True
+                })
+                logger.debug(f"自动生成必填校验规则: {field_path}")
+            
+            # 递归处理嵌套结构
+            if node_type == 'object' and 'properties' in field_def:
+                child_rules = self._generate_required_rules_from_schema(
+                    field_def['properties'], field_path
+                )
+                rules.extend(child_rules)
+            elif node_type in ('array', 'table'):
+                items = field_def.get('items', field_def.get('columns', {}))
+                if items:
+                    # 对于数组，子字段的必填校验需要特殊处理
+                    # 这里只生成数组本身的必填规则，子字段的必填在数组元素中校验
+                    pass
+        
+        return rules
 
     async def _save_results(
         self,
