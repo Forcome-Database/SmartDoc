@@ -6,14 +6,15 @@ FROM node:20-alpine as development
 
 WORKDIR /app
 
-# 配置 npm 国内镜像
-RUN npm config set registry https://registry.npmmirror.com
+# 安装 pnpm 并配置国内镜像
+RUN corepack enable && corepack prepare pnpm@latest --activate && \
+    pnpm config set registry https://registry.npmmirror.com
 
 # 复制 package 文件
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml* ./
 
 # 安装依赖
-RUN npm install
+RUN pnpm install
 
 # 复制应用代码
 COPY . .
@@ -22,7 +23,7 @@ COPY . .
 EXPOSE 5173
 
 # 开发命令
-CMD ["npm", "run", "dev", "--", "--host"]
+CMD ["pnpm", "run", "dev", "--", "--host"]
 
 
 # Build stage - 构建阶段
@@ -30,20 +31,21 @@ FROM node:20-alpine as build
 
 WORKDIR /app
 
-# 配置 npm 国内镜像
-RUN npm config set registry https://registry.npmmirror.com
+# 安装 pnpm 并配置国内镜像
+RUN corepack enable && corepack prepare pnpm@latest --activate && \
+    pnpm config set registry https://registry.npmmirror.com
 
 # 复制 package 文件
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml* ./
 
 # 安装所有依赖（构建需要 devDependencies）
-RUN npm install
+RUN pnpm install
 
 # 复制应用代码
 COPY . .
 
 # 构建应用
-RUN npm run build
+RUN pnpm run build
 
 
 # Production stage - 生产环境，使用 Nginx 提供静态文件服务
