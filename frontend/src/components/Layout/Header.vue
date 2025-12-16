@@ -8,7 +8,7 @@
       </div>
       <div class="logo-subtitle">智能文档处理中台</div>
     </div>
-
+    
     <!-- 右侧用户信息 -->
     <div class="header-right">
       <!-- 用户信息下拉菜单 -->

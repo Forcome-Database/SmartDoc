@@ -51,3 +51,21 @@ class RetentionConfigUpdate(BaseModel):
     """数据生命周期配置更新请求"""
     file_retention_days: int = Field(..., ge=1, le=365, description="文件留存期（天，1-365）")
     data_retention_days: int = Field(..., ge=0, le=3650, description="数据留存期（天，0表示永久保留，最大3650天）")
+
+
+class DingTalkConfigResponse(BaseModel):
+    """钉钉配置响应"""
+    enabled: bool = Field(False, description="是否启用钉钉通知")
+    webhook_url: Optional[str] = Field(None, description="钉钉群机器人Webhook URL")
+    updated_at: Optional[datetime] = Field(None, description="更新时间")
+
+
+class DingTalkConfigUpdate(BaseModel):
+    """钉钉配置更新请求"""
+    enabled: bool = Field(..., description="是否启用钉钉通知")
+    webhook_url: Optional[str] = Field(None, description="钉钉群机器人Webhook URL")
+
+
+class DingTalkTestRequest(BaseModel):
+    """钉钉测试请求"""
+    webhook_url: str = Field(..., description="要测试的Webhook URL")

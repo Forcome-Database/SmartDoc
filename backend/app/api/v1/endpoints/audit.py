@@ -38,6 +38,7 @@ from app.schemas.audit import (
     AuditSubmitRequest,
     AuditSubmitResponse
 )
+from app.services.dingtalk_service import dingtalk_service
 
 
 router = APIRouter(prefix="/audit", tags=["audit"])
@@ -702,6 +703,21 @@ async def submit_audit(
                 logger.info(f"任务 {task_id} 审核通过，已加入Pipeline队列")
             except Exception as e:
                 logger.error(f"发布Pipeline任务失败: {str(e)}")
+        
+        # 发送审核完成钉钉通知
+        try:
+            # 获取规则名称
+            rule_name = task.rule.name if task.rule else '未知规则'
+            await dingtalk_service.notify_audit_completed(
+                task_id=task_id,
+                file_name=task.file_name,
+                rule_id=str(task.rule_id),
+                rule_name=rule_name,
+                status=new_status,
+                auditor=current_user.username
+            )
+        except Exception as e:
+            logger.warning(f"发送审核完成通知失败: {str(e)}")
         
         logger.info(
             f"用户 {current_user.username} 提交审核: {task_id}, "

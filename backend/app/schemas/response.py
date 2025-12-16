@@ -33,14 +33,16 @@ class ResponseModel(BaseModel, Generic[T]):
 
 class SuccessResponse(BaseModel):
     """
-    成功响应模型（简单消息）
+    成功响应模型（带可选数据）
     """
     message: str = Field(description="成功消息")
+    data: Optional[Any] = Field(default=None, description="响应数据")
     
     class Config:
         json_schema_extra = {
             "example": {
-                "message": "操作成功"
+                "message": "操作成功",
+                "data": {}
             }
         }
 

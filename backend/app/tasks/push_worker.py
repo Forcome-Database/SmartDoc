@@ -20,6 +20,7 @@ from app.core.mq import RabbitMQClient
 from app.models.task import Task, TaskStatus
 from app.models.webhook import Webhook
 from app.services.push_service import PushService
+from app.services.dingtalk_service import dingtalk_service
 
 # 配置日志
 logging.basicConfig(
@@ -272,6 +273,11 @@ class PushWorker:
             task.status = TaskStatus.PUSH_SUCCESS
             await db.commit()
             logger.info(f"所有推送成功: task_id={task.id}")
+            
+            # 发送推送成功通知
+            await self._send_push_notification(
+                task, webhooks[0].name if webhooks else None, True
+            )
             return
         
         # 如果有失败，判断是否需要重试
@@ -351,6 +357,52 @@ class PushWorker:
                 f"推送失败，已达最大重试次数: task_id={task.id}, "
                 f"retry_count={retry_count}, failed={failed_count}/{len(results)}"
             )
+            
+            # 发送推送失败通知
+            failed_webhooks = [webhooks[i].name for i, r in enumerate(results) if not r.success]
+            await self._send_push_notification(
+                task, 
+                ', '.join(failed_webhooks), 
+                False, 
+                f"已达最大重试次数({retry_count})，已移入死信队列"
+            )
+
+
+    async def _send_push_notification(
+        self,
+        task: Task,
+        webhook_name: Optional[str],
+        success: bool,
+        error_message: Optional[str] = None
+    ):
+        """
+        发送推送结果钉钉通知
+        
+        Args:
+            task: 任务对象
+            webhook_name: Webhook名称
+            success: 是否成功
+            error_message: 错误信息
+        """
+        try:
+            # 获取规则名称
+            rule_name = task.rule.name if task.rule else '未知规则'
+            
+            await dingtalk_service.notify_push_result(
+                task_id=str(task.id),
+                file_name=task.file_name,
+                rule_id=str(task.rule_id),
+                rule_name=rule_name,
+                success=success,
+                webhook_name=webhook_name,
+                error_message=error_message
+            )
+            
+            logger.info(f"推送结果通知已发送: task_id={task.id}, success={success}")
+            
+        except Exception as e:
+            # 通知失败不影响主流程
+            logger.warning(f"发送推送结果通知失败: {str(e)}")
 
 
 # 全局Worker实例

@@ -288,3 +288,272 @@ async def update_retention_config(
             "data_retention_days": retention_update.data_retention_days
         }
     )
+
+
+@router.get("/dingtalk", response_model=SuccessResponse, summary="获取钉钉配置")
+async def get_dingtalk_config(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    获取钉钉群机器人配置（单条JSON配置方案）
+    
+    Returns:
+        SuccessResponse: 钉钉配置
+    """
+    from app.services.dingtalk_service import DEFAULT_CONFIG
+    
+    result = await db.execute(
+        select(SystemConfig).where(SystemConfig.key == "dingtalk_config")
+    )
+    config_record = result.scalar_one_or_none()
+    
+    if config_record and config_record.value:
+        config = {**DEFAULT_CONFIG, **config_record.value}
+        # 不返回密钥明文，只返回是否已配置
+        config["has_secret"] = bool(config.get("secret"))
+        config["secret"] = ""
+        config["updated_at"] = config_record.updated_at.isoformat() if config_record.updated_at else None
+    else:
+        config = {**DEFAULT_CONFIG, "has_secret": False, "updated_at": None}
+    
+    return SuccessResponse(message="获取钉钉配置成功", data=config)
+
+
+@router.put("/dingtalk", response_model=SuccessResponse, summary="更新钉钉配置")
+async def update_dingtalk_config(
+    config_update: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    更新钉钉群机器人配置（单条JSON配置方案）
+    
+    支持的配置项:
+    - enabled: 总开关
+    - webhook_url: Webhook地址
+    - secret: 加签密钥
+    - at_all: 是否@所有人
+    - at_mobiles: @指定人员手机号列表
+    - notify_events: 通知事件配置
+    - notify_rules: 启用通知的规则ID列表
+    
+    Args:
+        config_update: 配置更新数据
+        
+    Returns:
+        SuccessResponse: 成功响应
+    """
+    from app.services.dingtalk_service import DEFAULT_CONFIG, dingtalk_service
+    
+    # 获取现有配置
+    result = await db.execute(
+        select(SystemConfig).where(SystemConfig.key == "dingtalk_config")
+    )
+    config_record = result.scalar_one_or_none()
+    
+    # 合并配置
+    if config_record and config_record.value:
+        current_config = {**DEFAULT_CONFIG, **config_record.value}
+    else:
+        current_config = DEFAULT_CONFIG.copy()
+    
+    old_config = current_config.copy()
+    
+    # 更新配置项
+    if 'enabled' in config_update:
+        current_config['enabled'] = config_update['enabled']
+    if 'webhook_url' in config_update:
+        current_config['webhook_url'] = config_update['webhook_url']
+    if 'secret' in config_update and config_update['secret']:
+        # 只有传入非空密钥才更新
+        current_config['secret'] = config_update['secret']
+    if 'at_all' in config_update:
+        current_config['at_all'] = config_update['at_all']
+    if 'at_mobiles' in config_update:
+        current_config['at_mobiles'] = config_update['at_mobiles']
+    if 'notify_events' in config_update:
+        current_config['notify_events'] = {
+            **current_config.get('notify_events', {}),
+            **config_update['notify_events']
+        }
+    if 'notify_rules' in config_update:
+        current_config['notify_rules'] = config_update['notify_rules']
+    
+    # 保存配置
+    if config_record:
+        config_record.value = current_config
+        config_record.updated_by = current_user.id
+        config_record.updated_at = datetime.utcnow()
+    else:
+        config_record = SystemConfig(
+            key="dingtalk_config",
+            value=current_config,
+            description="钉钉群机器人通知配置",
+            updated_by=current_user.id
+        )
+        db.add(config_record)
+    
+    await db.commit()
+    
+    # 清除服务缓存
+    dingtalk_service.clear_cache()
+    
+    # 记录审计日志
+    audit_log = AuditLog(
+        user_id=current_user.id,
+        action_type="update_dingtalk_config",
+        resource_type="system_config",
+        resource_id="dingtalk_config",
+        changes={
+            "enabled": {"old": old_config.get('enabled'), "new": current_config.get('enabled')},
+            "webhook_url_changed": old_config.get('webhook_url') != current_config.get('webhook_url'),
+            "secret_updated": 'secret' in config_update and bool(config_update['secret']),
+            "notify_events": current_config.get('notify_events'),
+            "notify_rules": current_config.get('notify_rules')
+        },
+        ip_address=None,
+        user_agent=None
+    )
+    db.add(audit_log)
+    await db.commit()
+    
+    # 返回配置（隐藏密钥）
+    response_config = current_config.copy()
+    response_config['has_secret'] = bool(response_config.get('secret'))
+    response_config['secret'] = ''
+    
+    return SuccessResponse(
+        message="钉钉配置更新成功",
+        data=response_config
+    )
+
+
+@router.post("/dingtalk/test", response_model=SuccessResponse, summary="测试钉钉Webhook")
+async def test_dingtalk_webhook(
+    test_request: dict,
+    current_user: User = Depends(require_admin)
+):
+    """
+    测试钉钉群机器人Webhook
+    
+    - 发送测试消息到指定的Webhook URL
+    - 支持加签验证
+    - 支持@指定人员
+    - 仅Admin角色可访问
+    
+    Args:
+        test_request: 测试请求 {webhook_url, secret, at_all, at_mobiles}
+        
+    Returns:
+        SuccessResponse: 测试结果
+    """
+    import httpx
+    from app.services.dingtalk_service import DingTalkService
+    
+    webhook_url = test_request.get('webhook_url', '')
+    secret = test_request.get('secret', '')
+    at_all = test_request.get('at_all', True)
+    at_mobiles = test_request.get('at_mobiles', [])
+    
+    if not webhook_url:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Webhook URL不能为空"
+        )
+    
+    if not webhook_url.startswith('https://oapi.dingtalk.com/'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="无效的钉钉Webhook URL"
+        )
+    
+    try:
+        # 如果有加签密钥，生成带签名的URL
+        final_url = webhook_url
+        if secret:
+            final_url = DingTalkService.generate_sign_for_test(secret, webhook_url)
+        
+        # 构建测试消息
+        test_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        at_info = ""
+        if at_mobiles:
+            at_info = f"\n@人员: {', '.join(at_mobiles)}"
+        elif at_all:
+            at_info = "\n@所有人"
+        
+        message = {
+            "msgtype": "markdown",
+            "markdown": {
+                "title": "🔔 钉钉通知测试",
+                "text": f"### 🔔 智能文档处理中台 - 钉钉通知测试\n\n**测试时间**: {test_time}\n\n**测试人**: {current_user.username}{at_info}\n\n---\n如果您收到此消息，说明钉钉通知配置正确！"
+            },
+            "at": {
+                "isAtAll": at_all and not at_mobiles,
+                "atMobiles": at_mobiles
+            }
+        }
+        
+        # 发送测试请求
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.post(
+                final_url,
+                json=message,
+                headers={"Content-Type": "application/json"}
+            )
+        
+        if response.status_code == 200:
+            result = response.json()
+            if result.get("errcode") == 0:
+                return SuccessResponse(
+                    message="测试消息发送成功",
+                    data={"success": True}
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"钉钉返回错误: {result.get('errmsg', '未知错误')}"
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"请求失败: HTTP {response.status_code}"
+            )
+            
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=status.HTTP_408_REQUEST_TIMEOUT,
+            detail="请求超时，请检查网络连接"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"测试失败: {str(e)}"
+        )
+
+
+@router.get("/rules/simple", response_model=SuccessResponse, summary="获取规则简单列表")
+async def get_rules_simple_list(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    获取规则简单列表（用于钉钉通知规则选择）
+    
+    Returns:
+        SuccessResponse: 规则列表 [{id, name}]
+    """
+    from app.models.rule import Rule
+    
+    # 查询已发布的规则（current_version不为空表示已发布）
+    result = await db.execute(
+        select(Rule.id, Rule.name).where(Rule.current_version.isnot(None))
+    )
+    rules = result.all()
+    
+    return SuccessResponse(
+        message="获取规则列表成功",
+        data=[{"id": str(r.id), "name": r.name} for r in rules]
+    )
