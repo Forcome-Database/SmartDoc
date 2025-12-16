@@ -91,13 +91,14 @@
         :pagination="pagination"
         :row-selection="rowSelection"
         :row-key="record => record.id"
+        :scroll="{ x: 1400 }"
         @change="handleTableChange"
       >
         <!-- 任务ID -->
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'id'">
             <a-tooltip :title="record.id">
-              <span class="task-id">{{ record.id.substring(0, 8) }}...</span>
+              <span class="task-id">{{ record.id }}</span>
             </a-tooltip>
           </template>
 
@@ -281,7 +282,8 @@ const columns = [
   {
     title: '任务ID',
     key: 'id',
-    width: 220
+    width: 220,
+    fixed: 'left'
   },
   {
     title: '文件名',
@@ -310,7 +312,7 @@ const columns = [
   {
     title: '审核原因',
     key: 'audit_reasons',
-    width: 200,
+    width: 220,
     ellipsis: true
   },
   {
@@ -328,7 +330,7 @@ const columns = [
   {
     title: '操作',
     key: 'action',
-    width: 180,
+    width: 240,
     fixed: 'right'
   }
 ]
