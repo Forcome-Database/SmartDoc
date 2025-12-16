@@ -52,8 +52,6 @@ LANG_ID = 2052
 # API 路由
 URL_LOGIN = f"{API_HOST}Kingdee.BOS.WebApi.ServicesStub.AuthService.ValidateUser.common.kdsvc"
 URL_QUERY = f"{API_HOST}Kingdee.BOS.WebApi.ServicesStub.DynamicFormService.ExecuteBillQuery.common.kdsvc"
-URL_SAVE = f"{API_HOST}Kingdee.BOS.WebApi.ServicesStub.DynamicFormService.Save.common.kdsvc"
-URL_DRAFT = f"{API_HOST}Kingdee.BOS.WebApi.ServicesStub.DynamicFormService.Draft.common.kdsvc"
 
 # 金蝶表单ID
 FORM_ID = "PAEZ_PO"
@@ -166,7 +164,8 @@ def parse_number(value, default=0.0):
         return default
     try:
         # 移除常见的非数字字符
-        cleaned = str(value).replace(',', '').replace('$', '').replace('¥', '').strip()
+        cleaned = str(value).replace(',', '').replace(
+            '$', '').replace('¥', '').strip()
         return float(cleaned) if cleaned else default
     except (ValueError, TypeError):
         return default
@@ -176,7 +175,11 @@ def query_material_mapping(client, cust_mat_no):
     """
     查询客户物料映射，获取内部物料编码
 
-    SQL逻辑: SELECT FMaterialId FROM t_Sal_CustMatMapping WHERE FCustMatNo = '{cust_mat_no}'
+    SQL逻辑: 
+    SELECT e.FMATERIALID 
+    FROM T_SAL_CUSTMATMAPPING h
+    JOIN T_SAL_CUSTMATMAPPINGENTRY e ON h.FID = e.FID
+    WHERE h.FBILLNO='KHWLDYB0024' AND e.FCUSTMATNO='{cust_mat_no}'
 
     Args:
         client: KingdeeClient实例
@@ -188,7 +191,7 @@ def query_material_mapping(client, cust_mat_no):
     result = client.query_data(
         form_id="SAL_CustMatMapping",
         field_keys="FMaterialId.FNumber",
-        filter_string=f"FCustMatNo = '{cust_mat_no}'"
+        filter_string=f"FBillNo = 'KHWLDYB0024' AND FCustMatNo = '{cust_mat_no}'"
     )
 
     if result and len(result) > 0 and len(result[0]) > 0:
@@ -228,7 +231,8 @@ def query_material_attributes(client, material_no):
             'fxsy': row[1] if len(row) > 1 and row[1] else defaults['fxsy'],
             'fxsz': row[2] if len(row) > 2 and row[2] else defaults['fxsz']
         }
-        print(f"物料属性 {material_no}: FSYB={attrs['fsyb']}, FXSY={attrs['fxsy']}, FXSZ={attrs['fxsz']}")
+        print(
+            f"物料属性 {material_no}: FSYB={attrs['fsyb']}, FXSY={attrs['fxsy']}, FXSZ={attrs['fxsz']}")
         return attrs
     else:
         print(f"警告: 未查询到物料 {material_no} 的属性，使用默认值")
@@ -312,7 +316,7 @@ def process_data(ocr_data):
         "FCustId": {"FNumber": "UPL"},
         "F_XSBB": {"FNumber": "PRE007"},
         "FLOCALCURRID": {"FNumber": "PRE007"},
-        "F_fsh_Priceterms": "FOB",
+        "F_fsh_Priceterms": "DDU",
         "F_fsh_shipto": ocr_data.get("ship_to", ""),
         "F_fsh_departure": {"FNumber": "02"},
         "F_fsh_Assistant": {"FNumber": "070"},
@@ -337,5 +341,6 @@ def process_data(ocr_data):
     }
 
     return output
+
 
 output_data = process_data(extracted_data)

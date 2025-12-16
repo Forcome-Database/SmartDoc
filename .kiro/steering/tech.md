@@ -53,3 +53,29 @@ npm run dev
 | Redis | 6379 |
 | RabbitMQ | 5672 / 15672 |
 | MinIO | 9000 / 9001 |
+
+## API响应格式
+
+**后端SuccessResponse格式：**
+```python
+# backend/app/schemas/response.py
+class SuccessResponse(BaseModel):
+    message: str
+    data: Any = None
+```
+
+**前端Axios拦截器处理：**
+- Axios响应拦截器已返回 `response.data`
+- 因此在前端代码中，`response` 实际上是 `{ message: '', data: {...} }`
+- 获取实际数据需要访问 `response.data`（即原始的 `response.data.data`）
+
+```javascript
+// 正确用法
+const response = await systemAPI.getDingTalkConfig()
+const config = response.data  // 实际数据在这里
+
+// 错误用法（会得到整个响应对象）
+const config = response  // 这是 { message: '', data: {...} }
+```
+
+**注意：** 不同API可能返回格式不同，部分API直接返回数据（如分页列表），需要根据具体API文档确认。
