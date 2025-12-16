@@ -4,7 +4,7 @@
     <div class="header-left">
       <div class="logo">
         <FileTextOutlined class="logo-icon" />
-        <span class="logo-text">Enterprise IDP Platform</span>
+        <span class="logo-text">FORCOME文档中台</span>
       </div>
       <div class="logo-subtitle">智能文档处理中台</div>
     </div>
