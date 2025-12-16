@@ -321,6 +321,11 @@ class ExtractionService:
             # 从LLM结果中提取数据（保持原始嵌套结构）
             extracted_data = llm_result.get('data', {})
 
+            # 检查 extracted_data 是否为空或 None
+            if not extracted_data:
+                logger.warning("LLM返回的数据为空或None")
+                return {}, llm_stats
+
             # 过滤并返回LLM结果，只保留Schema中定义的字段
             results = {}
             for field_key, field_value in extracted_data.items():

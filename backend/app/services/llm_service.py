@@ -393,11 +393,15 @@ class LLMService:
 
         def _sync_call():
             # 构建请求链
-            request = agent.input({"document_text": context})
-
-            # 添加字段提取提示
+            # 将 extraction_hints 放入 input 字典，确保 {extraction_hints} 占位符能被正确替换
+            input_data = {"document_text": context}
             if field_hints:
-                request = request.info("extraction_hints", field_hints)
+                input_data["extraction_hints"] = field_hints
+
+            # 禁用流式模式，避免某些代理服务器不支持 SSE 导致的错误
+            agent.set_settings("model.OpenAICompatible.options.stream", False)
+
+            request = agent.input(input_data)
 
             # 添加通用提取指令
             request = request.instruct(instruct_list)
@@ -1045,10 +1049,14 @@ class LLMService:
             loop = asyncio.get_event_loop()
 
             def _sync_call():
+                # 禁用流式模式，避免某些代理服务器不支持 SSE 导致的错误
+                agent.set_settings("model.OpenAICompatible.options.stream", False)
                 return (
                     agent
-                    .input({"document_text": context})
-                    .info("extraction_hint", hint)
+                    .input({
+                        "document_text": context,
+                        "extraction_hint": hint
+                    })
                     .instruct([
                         "从{document_text}中提取信息",
                         "参考{extraction_hint}进行精确匹配",
@@ -1308,7 +1316,8 @@ class LLMService:
                     .set_settings("model.OpenAICompatible.auth", {"api_key": settings.LLM_API_KEY})
                     .set_settings("model.OpenAICompatible.options", {
                         "model": settings.LLM_MODEL,
-                        "rich_content": True  # 启用多模态支持
+                        "rich_content": True,  # 启用多模态支持
+                        "stream": False  # 禁用流式模式
                     })
                 )
                 
