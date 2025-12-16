@@ -166,7 +166,7 @@ router.beforeEach((to, from, next) => {
   
   // 设置页面标题
   if (to.meta.title) {
-    document.title = `${to.meta.title} - Enterprise IDP Platform`
+    document.title = `${to.meta.title} - FORCOME文档中台`
   }
   
   // 检查登录状态

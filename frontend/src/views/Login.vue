@@ -73,7 +73,7 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
-const appTitle = import.meta.env.VITE_APP_TITLE || 'Enterprise IDP Platform'
+const appTitle = import.meta.env.VITE_APP_TITLE || 'FORCOME文档中台'
 
 const formRef = ref()
 const formState = reactive({
