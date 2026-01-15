@@ -29,13 +29,15 @@
       "@composables/*": ["docs/.vitepress/theme/composables/*"],
       "@services/*": ["docs/.vitepress/theme/services/*"],
       "@styles/*": ["docs/.vitepress/theme/styles/*"],
-      "@types/*": ["docs/.vitepress/theme/types/*"]
+      "@types/*": ["docs/.vitepress/theme/types/*"],
+      "@shared/*": ["shared/*"]
     }
   },
   "include": [
+    "shared/**/*.ts",
     "docs/.vitepress/**/*.ts",
     "docs/.vitepress/**/*.vue",
     "docs/.vitepress/env.d.ts"
   ],
-  "exclude": ["node_modules", "docs/.vitepress/cache", "docs/.vitepress/dist"]
+  "exclude": ["node_modules", "docs/.vitepress/cache", "docs/.vitepress/dist", "admin"]
 }

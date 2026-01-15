@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /b \"C:\\\\Users\\\\leo\\\\.claude\")",
+      "Bash(claude skills:*)",
+      "Bash(tree:*)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:nuxt.com)",
+      "mcp__plugin_context7_context7__query-docs"
+    ]
+  }
+}

@@ -1,13 +1,22 @@
 {
-    "name": "cursor-docs-platform",
+    "name": "forcome-docs",
     "version": "1.0.0",
-    "description": "Cursor 风格文档平台 - 基于 VitePress",
+    "description": "FORCOME 知识库平台 - VitePress 文档站点 + Nuxt 后台管理",
+    "private": true,
     "type": "module",
     "scripts": {
-        "docs:dev": "vitepress dev docs --host",
-        "docs:build": "vitepress build docs",
-        "docs:preview": "vitepress preview docs",
-        "type-check": "vue-tsc --noEmit"
+        "docs:dev": "pnpm --filter docs dev",
+        "docs:build": "pnpm --filter docs build",
+        "docs:preview": "pnpm --filter docs preview",
+        "admin:dev": "pnpm --filter forcome-admin dev",
+        "admin:build": "pnpm --filter forcome-admin build",
+        "admin:preview": "pnpm --filter forcome-admin preview",
+        "dev": "pnpm docs:dev",
+        "build": "pnpm docs:build && pnpm admin:build",
+        "type-check": "vue-tsc --noEmit",
+        "db:generate": "drizzle-kit generate",
+        "db:migrate": "drizzle-kit migrate",
+        "db:studio": "drizzle-kit studio"
     },
     "keywords": [
         "vitepress",
@@ -20,6 +29,7 @@
     "devDependencies": {
         "@tailwindcss/vite": "^4.1.18",
         "d3": "^7.9.0",
+        "drizzle-kit": "^0.30.0",
         "markmap-lib": "^0.18.12",
         "markmap-view": "^0.18.12",
         "mermaid": "^11.12.2",

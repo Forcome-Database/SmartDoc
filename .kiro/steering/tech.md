@@ -1,74 +1,88 @@
 # Tech Stack & Build System
 
+## Monorepo Structure
+
+| Package | Technology | Purpose |
+|---------|------------|---------|
+| `docs/` | VitePress ^2.0 | 文档站点 |
+| `admin/` | Nuxt 3.14+ | 后台管理系统 |
+| `shared/` | TypeScript | 共享 Schema/Types |
+
 ## Core Technologies
 
 | Category | Technology | Version |
 |----------|------------|---------|
-| Static Site Generator | VitePress | ^2.0.0 |
-| Frontend Framework | Vue 3 | ^3.5.0 |
-| Type System | TypeScript | ^5.3.3 |
-| CSS Framework | Tailwind CSS | ^4.0.0 |
+| Docs Framework | VitePress | ^2.0.0 |
+| Admin Framework | Nuxt 3 | ^3.14.0 |
+| UI Components | Nuxt UI v3 | (Radix Vue) |
+| Editor | md-editor-v3 | ^6.3.1 |
+| Database | PostgreSQL | Neon 托管 |
+| ORM | Drizzle ORM | ^0.36.0 |
+| Auth | nuxt-auth-utils | 钉钉 OAuth |
+| AI SDK | @ai-sdk/vue | 流式翻译 |
+| State | Pinia + VueUse | 状态管理 |
+| CSS | Tailwind CSS | ^4.0.0 |
 | Package Manager | pnpm | ^9.0.0 |
-| AI Service | Dify API | SSE streaming |
+| File Storage | MinIO | 对象存储 |
 
 ## Development Commands
 
 ```bash
-# Install dependencies
+# 安装依赖
 pnpm install
 
-# Start dev server
+# 文档站点
 pnpm docs:dev
-
-# Build for production
 pnpm docs:build
 
-# Preview production build
-pnpm docs:preview
+# 后台系统
+pnpm dev:admin
+pnpm build:admin
 
-# Type check
-pnpm type-check
+# 数据库
+pnpm db:generate    # 生成迁移
+pnpm db:migrate     # 执行迁移
+pnpm db:studio      # Drizzle Studio
 ```
 
 ## Code Conventions
 
 - **Vue Components**: Composition API with `<script setup lang="ts">`
 - **TypeScript**: Strict mode enabled
-- **Styling**: CSS variables for theming, avoid hardcoded colors
+- **Styling**: Tailwind CSS + CSS variables for theming
 - **Comments**: Chinese language for code comments
-- **State Management**: Composables pattern (useTheme, useSidebar, useAIChat, etc.)
+- **State**: Composables (`use*`) + Pinia stores
 
 ## Environment Variables
 
 ```bash
+# Database
+DATABASE_URL=postgresql://...
+
+# DingTalk OAuth
+DINGTALK_APP_KEY=your-app-key
+DINGTALK_APP_SECRET=your-app-secret
+
+# AI Service
+OPENAI_API_KEY=your-api-key
+
+# Docs (VitePress)
 VITE_DIFY_API_BASE=https://your-dify-instance/v1
 VITE_DIFY_API_KEY=your-api-key
 ```
-
-## Key Dependencies
-
-- `@vue/test-utils` - Component testing
-- `vitest` - Unit testing
-- `playwright` - E2E testing (optional)
 
 ## Agent Guidelines
 
 ### 第三方依赖使用规范
 
-在使用任何第三方库或框架时，**必须先查阅对应版本的官方文档**，确保 API 用法与指定版本兼容：
+使用第三方库时，**必须先查阅对应版本的官方文档**：
 
-- VitePress 2.0: 使用 Context7 MCP 工具查询 `/vitepress/vitepress` 文档
-- Vue 3.4+: 查询 Composition API 和 `<script setup>` 语法
-- Tailwind CSS 4.0: 注意 v4 与 v3 的配置差异
+- VitePress 2.0: Context7 查询 `/vitepress/vitepress`
+- Nuxt 3: Context7 查询 `/nuxt/nuxt`
+- Nuxt UI v3: Context7 查询 `/nuxt/ui`
+- md-editor-v3: Context7 查询 `/imzbf/md-editor-v3`
+- Drizzle ORM: Context7 查询 `/drizzle-team/drizzle-orm`
 
-### UI 参考与调研
+### UI 参考
 
-需要了解 Cursor 官网界面、UI 细节或交互行为时，使用 **Playwright MCP 工具**：
-
-```
-1. - 访问 https://cursor.com/cn/docs
-2. - 截图参考
-3. - 获取页面结构
-```
-
-这样可以确保实现与目标网站的视觉和交互保持一致。
+参考 Mintlify 风格实现简约大气的后台界面。

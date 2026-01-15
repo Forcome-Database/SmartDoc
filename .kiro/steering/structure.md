@@ -1,57 +1,49 @@
 # Project Structure
 
 ```
-docs/
-├── .vitepress/
-│   ├── config.ts                 # VitePress config (nav, sidebar, locales)
-│   ├── theme/
-│   │   ├── index.ts              # Theme entry point
-│   │   ├── Layout.vue            # Root layout component
-│   │   ├── components/
-│   │   │   ├── NavBar.vue        # Top navigation bar
-│   │   │   ├── SideBar.vue       # Left sidebar with resize handle
-│   │   │   ├── SideBarItem.vue   # Recursive sidebar item
-│   │   │   ├── SearchModal.vue   # Full-screen search (⌘K)
-│   │   │   ├── AIChat.vue        # AI Q&A panel (⌘I)
-│   │   │   ├── AIChatMessage.vue # Chat message component
-│   │   │   ├── RightPanel.vue    # Right panel (TOC + toolbar)
-│   │   │   ├── ThemeToggle.vue   # Dark/light mode toggle
-│   │   │   ├── LangSwitch.vue    # Language switcher
-│   │   │   └── icons/            # SVG icon components
-│   │   ├── composables/
-│   │   │   ├── useTheme.ts       # Theme state & persistence
-│   │   │   ├── useSidebar.ts     # Sidebar width & drag logic
-│   │   │   ├── useSearch.ts      # Search state & keyboard nav
-│   │   │   ├── useAIChat.ts      # AI chat state & Dify integration
-│   │   │   └── useStorage.ts     # localStorage wrapper
-│   │   ├── services/
-│   │   │   ├── dify.ts           # Dify API client (SSE streaming)
-│   │   │   └── storage.ts        # Storage service
-│   │   ├── types/
-│   │   │   └── index.ts          # TypeScript type definitions
-│   │   └── styles/
-│   │       ├── vars.css          # CSS variables (colors, spacing, fonts)
-│   │       ├── base.css          # Reset & base styles
-│   │       ├── layout.css        # Layout structure styles
-│   │       ├── components.css    # Component-specific styles
-│   │       ├── markdown.css      # Markdown content styles
-│   │       └── transitions.css   # Animation & transition styles
-│   └── cache/
-├── public/
-│   ├── fonts/
-│   │   ├── inter/                # Inter font files (woff2)
-│   │   └── jetbrains-mono/       # JetBrains Mono font files
-│   └── images/
-│       └── logo.svg
-├── zh/                           # Chinese docs (default)
-├── en/                           # English docs
-├── ja/                           # Japanese docs
-└── index.md                      # Homepage
+project-root/
+├── docs/                          # VitePress 文档站点
+│   ├── .vitepress/
+│   │   ├── config.ts
+│   │   └── theme/
+│   │       ├── components/        # 🔗 可共享组件
+│   │       ├── composables/
+│   │       └── styles/
+│   ├── zh/ en/ vi/                # 多语言内容
+│   └── public/
+│
+├── admin/                         # Nuxt 3 后台系统
+│   ├── pages/
+│   │   ├── index.vue              # Dashboard
+│   │   ├── login.vue              # 钉钉登录
+│   │   ├── documents/[id].vue     # 文档编辑
+│   │   ├── categories/            # 栏目管理
+│   │   ├── nav-menus/             # 导航菜单
+│   │   └── settings/              # 系统设置
+│   ├── components/
+│   │   ├── editor/                # md-editor-v3 编辑器
+│   │   ├── content-tree/          # 内容树组件
+│   │   ├── file-tree/             # 文件树
+│   │   └── layout/                # 布局组件
+│   ├── composables/               # useEditLock, useTranslation...
+│   ├── stores/                    # Pinia stores
+│   ├── server/
+│   │   ├── api/                   # Server API routes
+│   │   └── utils/                 # db.ts, git.ts, dingtalk.ts
+│   └── types/
+│
+├── shared/                        # 共享代码
+│   ├── schema/                    # Drizzle Schema
+│   └── types/
+│
+├── drizzle/                       # 数据库迁移
+├── drizzle.config.ts
+└── pnpm-workspace.yaml
 ```
 
 ## Key Patterns
 
-- **Composables**: All stateful logic lives in `composables/` with `use*` naming
-- **Services**: External API integrations in `services/`
-- **CSS Variables**: Theme values defined in `vars.css`, referenced throughout
-- **Component Hierarchy**: Layout → NavBar/SideBar/Content → child components
+- **Composables**: `use*` 命名，状态逻辑封装
+- **Shared Schema**: `shared/schema/` 定义数据库表结构
+- **Component Sharing**: Admin 可引用 `docs/.vitepress/theme/components/`
+- **Server API**: Nuxt Server Routes 处理后端逻辑

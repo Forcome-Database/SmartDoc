@@ -4,6 +4,9 @@ node_modules/
 # Build output
 docs/.vitepress/dist/
 docs/.vitepress/cache/
+admin/.nuxt/
+admin/.output/
+admin/dist/
 
 # Environment variables
 .env
@@ -13,6 +16,7 @@ docs/.vitepress/cache/
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 .idea/
 *.suo
 *.ntvs*
@@ -23,14 +27,31 @@ docs/.vitepress/cache/
 # OS generated files
 .DS_Store
 Thumbs.db
+nul
 
 # Logs
 *.log
 npm-debug.log*
 pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # TypeScript cache
 *.tsbuildinfo
 
 # Test coverage
 coverage/
+
+# Drizzle
+drizzle/meta/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock

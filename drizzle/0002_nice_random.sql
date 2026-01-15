@@ -1,0 +1,1 @@
+ALTER TABLE "documents" ADD COLUMN "has_unpublished_changes" boolean DEFAULT false NOT NULL;
