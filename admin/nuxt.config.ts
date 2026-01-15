@@ -9,8 +9,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 config({ path: resolve(__dirname, '../.env') })
 
 export default defineNuxtConfig({
+  // 保持 Nuxt 3 目录结构（Nuxt 4 默认使用 app/ 目录）
+  srcDir: '.',
+
   devtools: { enabled: true },
-  
+
   // 禁用遥测
   telemetry: false,
 
@@ -75,11 +78,6 @@ export default defineNuxtConfig({
     },
   },
 
-  // Nuxt UI 配置
-  ui: {
-    icons: ['lucide', 'simple-icons'],
-  },
-
   // 图标配置 - 使用本地图标包
   icon: {
     // 明确指定使用的图标集合
@@ -92,5 +90,5 @@ export default defineNuxtConfig({
     },
   },
 
-  compatibilityDate: '2024-12-01',
+  compatibilityDate: '2025-01-01',
 })
