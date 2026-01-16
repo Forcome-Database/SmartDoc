@@ -22,9 +22,32 @@ const emit = defineEmits<{
 // 编辑器唯一标识
 const editorId = computed(() => `doc-editor-${props.documentId || 'default'}`)
 
-// 深色模式
+// 深色模式 - 通过检测 HTML 根元素的 class 来判断实际主题
 const colorMode = useColorMode()
-const theme = computed(() => colorMode.value === 'dark' ? 'dark' : 'light')
+const isDark = ref(false)
+
+// 监听主题变化
+const updateTheme = () => {
+  if (import.meta.client) {
+    isDark.value = document.documentElement.classList.contains('dark')
+  }
+}
+
+// 监听 colorMode 变化
+watch(() => colorMode.value, () => {
+  nextTick(updateTheme)
+}, { immediate: true })
+
+// 初始化时检测
+onMounted(() => {
+  updateTheme()
+  // 监听 class 变化（处理系统主题切换）
+  const observer = new MutationObserver(updateTheme)
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+  onUnmounted(() => observer.disconnect())
+})
+
+const theme = computed(() => isDark.value ? 'dark' : 'light')
 
 // 图片上传
 const { upload: uploadImage } = useImageUpload()

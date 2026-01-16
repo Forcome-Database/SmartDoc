@@ -41,7 +41,6 @@ const navItems = computed(() => [
 
 // 设置菜单项
 const settingsItems = computed(() => {
-  console.log('[AppSidebar] userStore.isAdmin:', userStore.isAdmin, 'user:', userStore.user)
   return [
     {
       label: '语言管理',
