@@ -17,9 +17,10 @@ shared/schema/index.ts     # 数据库 Schema
 ## 技术栈
 
 - **docs/**: VitePress 2.0, TailwindCSS 4
-- **admin/**: Nuxt 3.14, @nuxt/ui 3.0, Pinia, Drizzle ORM
+- **admin/**: Nuxt 4.2, @nuxt/ui 4.x, Pinia, Drizzle ORM
 - **数据库**: PostgreSQL, MinIO
 - **认证**: 钉钉 OAuth
+- **字体**: @fontsource (本地化，无远程请求)
 
 ## 命令
 
@@ -53,6 +54,9 @@ pnpm db:migrate   # 执行迁移
 | 重复导出警告 | 统一到 shared/types，删除重复文件 |
 | 组件未找到 | 检查 components 目录结构和自动导入前缀 |
 | API 401 未登录 | 检查 session 配置和 cookie |
+| Google Fonts 连接失败 | nuxt.config.ts 设置 `ui: { fonts: false }`，使用 @fontsource |
+| Session 不持久化 | runtimeConfig.session.cookie.secure 开发环境设为 false |
+| WSL native binding 错误 | `rm -rf node_modules && CI=true pnpm install` |
 
 ## 图标配置
 
@@ -65,6 +69,19 @@ icon: {
   serverBundle: { collections: ['lucide', 'simple-icons'] },
   clientBundle: { scan: true }
 }
+```
+
+## 字体配置
+
+```typescript
+// nuxt.config.ts - 禁用 @nuxt/fonts 远程请求
+ui: {
+  fonts: false,
+}
+
+// assets/css/main.css - 使用本地 @fontsource 字体
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
 ```
 
 ## 文档维护
