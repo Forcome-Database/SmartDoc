@@ -90,23 +90,10 @@ export default defineNuxtConfig({
     },
   },
 
-  // 字体配置 - 使用本地字体，禁用远程提供商
-  fonts: {
-    // 禁用所有远程字体提供商
-    providers: {
-      google: false,
-      bunny: false,
-      fontshare: false,
-      fontsource: false,
-    },
-    // 使用本地字体
-    families: [
-      { name: 'Inter', provider: 'local' },
-      { name: 'JetBrains Mono', provider: 'local' },
-    ],
-    defaults: {
-      weights: [400, 500, 600, 700],
-    },
+  // @nuxt/ui 配置 - 禁用内置字体模块，使用 CSS 直接导入 @fontsource 字体
+  // 字体已在 assets/css/main.css 中通过 @import "@fontsource-variable/inter" 导入
+  ui: {
+    fonts: false,
   },
 
   // 图标配置 - 使用本地图标包
