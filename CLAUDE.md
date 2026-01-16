@@ -1,6 +1,6 @@
 # FORCOME 知识库平台
 
-Monorepo: VitePress 文档站点 + Nuxt 3 后台管理系统
+Monorepo: VitePress 文档站点 + Nuxt 4 后台管理系统
 
 ## 关键文件
 

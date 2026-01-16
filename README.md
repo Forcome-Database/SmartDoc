@@ -1,6 +1,6 @@
 # FORCOME 知识库平台
 
-企业知识管理平台，包含 VitePress 文档站点和 Nuxt 3 后台管理系统。
+企业知识管理平台，包含 VitePress 文档站点和 Nuxt 4 后台管理系统。
 
 ## 项目结构
 
@@ -10,7 +10,7 @@
 │   ├── zh/                  # 中文文档
 │   ├── en/                  # 英文文档
 │   └── vi/                  # 越南语文档
-├── admin/                   # Nuxt 3 后台管理系统
+├── admin/                   # Nuxt 4 后台管理系统
 │   ├── server/              # API 服务端
 │   │   ├── api/             # API 端点
 │   │   ├── middleware/      # 服务端中间件
@@ -35,11 +35,12 @@
 - Markmap (思维导图)
 
 ### 后台管理 (admin/)
-- Nuxt 3.14
+- Nuxt 4.2
 - Vue 3.5
 - Pinia (状态管理)
-- @nuxt/ui 3.0 (UI 组件库)
-- @nuxt/icon 1.15 (图标模块)
+- @nuxt/ui 4.x (UI 组件库)
+- @nuxt/icon (图标模块)
+- @fontsource (本地字体)
 - md-editor-v3 (Markdown 编辑器)
 
 ### 后端
