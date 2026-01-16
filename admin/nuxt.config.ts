@@ -47,6 +47,18 @@ export default defineNuxtConfig({
 
   // 运行时配置
   runtimeConfig: {
+    // Session 配置 (nuxt-auth-utils)
+    session: {
+      maxAge: 60 * 60 * 24 * 7, // 1 week
+      name: 'nuxt-session',
+      password: process.env.NUXT_SESSION_PASSWORD || '',
+      cookie: {
+        sameSite: 'lax',
+        // 开发环境使用 HTTP，生产环境使用 HTTPS
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+      },
+    },
     // 服务端私有
     databaseUrl: process.env.DATABASE_URL,
     dingtalkAppKey: process.env.DINGTALK_APP_KEY,
@@ -75,6 +87,25 @@ export default defineNuxtConfig({
   nitro: {
     experimental: {
       asyncContext: true,
+    },
+  },
+
+  // 字体配置 - 使用本地字体，禁用远程提供商
+  fonts: {
+    // 禁用所有远程字体提供商
+    providers: {
+      google: false,
+      bunny: false,
+      fontshare: false,
+      fontsource: false,
+    },
+    // 使用本地字体
+    families: [
+      { name: 'Inter', provider: 'local' },
+      { name: 'JetBrains Mono', provider: 'local' },
+    ],
+    defaults: {
+      weights: [400, 500, 600, 700],
     },
   },
 

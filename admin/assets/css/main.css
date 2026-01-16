@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
+/* 本地字体 - 使用 fontsource */
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
+
 /* ============================================
    FORCOME 知识库后台管理系统 - 全局样式
    Mintlify 风格：简约大气，充足留白
